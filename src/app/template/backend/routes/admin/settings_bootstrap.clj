@@ -42,6 +42,7 @@
        :navigation (constantly {:valid? true})}})
 
 (def ^:private expense-categories-entity :expense-categories)
+(def ^:private expense-contexts-entity :expense-contexts)
 
 (declare admin-defaults user-defaults)
 
@@ -87,6 +88,19 @@
   [current defaults]
   (merge (or defaults {}) (or current {})))
 
+(defn- merge-missing-deep-map-entries
+  [current defaults]
+  (deep-merge (or defaults {}) (or current {})))
+
+(defn- reconcile-entity-map-entry
+  [current defaults entity-key merge-fn]
+  (let [default-entity (get defaults entity-key)
+        current-entity (get current entity-key)]
+    (cond
+      (nil? default-entity) current
+      (nil? current-entity) (assoc (or current {}) entity-key default-entity)
+      :else (assoc (or current {}) entity-key (merge-fn current-entity default-entity)))))
+
 (defn- reconcile-expense-category-form-fields
   [current defaults]
   (let [default-entity (get defaults expense-categories-entity)
@@ -122,6 +136,28 @@
           (update :column-config merge-missing-map-entries (:column-config default-entity))
           (update :column-metadata merge-missing-map-entries (:column-metadata default-entity)))))))
 
+(defn- reconcile-expense-context-entities
+  [current defaults]
+  (reconcile-entity-map-entry current defaults expense-contexts-entity merge-missing-deep-map-entries))
+
+(defn- reconcile-expense-context-view-options
+  [current defaults]
+  (reconcile-entity-map-entry current defaults expense-contexts-entity merge-missing-deep-map-entries))
+
+(defn- reconcile-expense-context-table-columns
+  [current defaults]
+  (reconcile-entity-map-entry current defaults expense-contexts-entity
+    (fn [current-entity default-entity]
+      (-> current-entity
+        (update :available-columns merge-ordered-values (:available-columns default-entity))
+        (update :default-visible-columns merge-ordered-values (:default-visible-columns default-entity))
+        (update :filterable-columns merge-ordered-values (:filterable-columns default-entity))
+        (update :sortable-columns merge-ordered-values (:sortable-columns default-entity))
+        (update :always-visible merge-ordered-values (:always-visible default-entity))
+        (update :computed-fields merge-missing-map-entries (:computed-fields default-entity))
+        (update :column-config merge-missing-map-entries (:column-config default-entity))
+        (update :column-metadata merge-missing-map-entries (:column-metadata default-entity))))))
+
 (defn- reconcile-runtime-config!
   [db {:keys [scope config-key read-fn write-fn defaults merge-fn]}]
   (let [current (or (read-fn db) {})
@@ -131,7 +167,7 @@
       (log/info "Bootstrap: reconciled runtime frontend config"
         {:scope scope
          :config-key config-key
-         :entity expense-categories-entity}))
+         :entities [expense-categories-entity expense-contexts-entity]}))
     updated))
 
 (defn- reconcile-expense-category-default-config!
@@ -160,6 +196,28 @@
                    :write-fn settings-io/write-user-table-columns!
                    :defaults (user-defaults :table-columns)
                    :merge-fn reconcile-expense-category-table-columns}]]
+    (reconcile-runtime-config! db config)))
+
+(defn- reconcile-expense-context-default-config!
+  [db]
+  (doseq [config [{:scope "user"
+             :config-key :entities
+             :read-fn settings-io/read-user-entities
+             :write-fn settings-io/write-user-entities!
+             :defaults (user-defaults :entities)
+             :merge-fn reconcile-expense-context-entities}
+          {:scope "user"
+             :config-key :view-options
+             :read-fn settings-io/read-user-view-options
+             :write-fn settings-io/write-user-view-options!
+             :defaults (user-defaults :view-options)
+             :merge-fn reconcile-expense-context-view-options}
+          {:scope "user"
+             :config-key :table-columns
+             :read-fn settings-io/read-user-table-columns
+             :write-fn settings-io/write-user-table-columns!
+             :defaults (user-defaults :table-columns)
+             :merge-fn reconcile-expense-context-table-columns}]]
     (reconcile-runtime-config! db config)))
 
 (defn- read-edn-default!
@@ -315,6 +373,7 @@
     (seed-channel! db "user" :navigation (user-defaults :navigation))
 
     (reconcile-expense-category-default-config! db)
+    (reconcile-expense-context-default-config! db)
 
     (log/info "Bootstrap: runtime frontend config check complete")
     :ok

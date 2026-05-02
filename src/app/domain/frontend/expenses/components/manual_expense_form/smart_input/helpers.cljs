@@ -57,6 +57,9 @@
 (def context-search-order
   [:supplier :store :category])
 
+(def phase-two-optional-context-types
+  [:expense-context])
+
 (defn focused-search-types
   [context article-mode?]
   (if article-mode?
@@ -108,14 +111,20 @@
   [context sub-stage]
   (case sub-stage
     :defaults
-    (if (:category context)
-      []
-      [:category])
+    (vec (concat
+           (when-not (:category context)
+             [:category])
+           (when-not (:expense-context context)
+             phase-two-optional-context-types)))
 
     :store-search
-    (vec (remove #(contains? context %) context-search-order))
+    (vec (concat
+           (remove #(contains? context %) context-search-order)
+           (remove #(contains? context %) phase-two-optional-context-types)))
 
-    (vec (remove #(contains? context %) context-search-order))))
+    (vec (concat
+           (remove #(contains? context %) context-search-order)
+           (remove #(contains? context %) phase-two-optional-context-types)))))
 
 (defn search-placeholder
   [t context active-search? article-mode?]

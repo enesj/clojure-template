@@ -24,7 +24,7 @@
     articles))
 
 (defn build-local-search-results
-  [dropdown-open? input-text suppliers stores expense-categories articles-with-prices available-search-types context]
+  [dropdown-open? input-text suppliers stores expense-categories expense-contexts articles-with-prices available-search-types context]
   (when (and dropdown-open?
           (>= (count (str/trim input-text)) 2))
     (-> (search/search-all-entities
@@ -32,6 +32,7 @@
           {:suppliers suppliers
            :stores stores
            :categories expense-categories
+           :expense-contexts expense-contexts
            :articles articles-with-prices}
           {:selected-supplier-id (some-> context :supplier :id)})
       (search/filter-results-by-entity-types available-search-types))))

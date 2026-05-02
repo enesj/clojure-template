@@ -126,7 +126,7 @@
     ($ :div {:class "flex flex-wrap gap-3"}
       (for [entity-type (if (seq allowed-types)
                           allowed-types
-                          [:article :supplier :store :category])]
+              [:article :supplier :store :category :expense-context])]
         (let [{:keys [icon]} (search/entity-type-info entity-type)
               btn-class (get type-button-styles entity-type)]
           ($ :button {:key (name entity-type)
@@ -149,7 +149,7 @@
 
 (defn top-items-for-type
   "Return up to `n` items for the given entity type from local data."
-  [entity-type suppliers stores expense-categories articles n selected-supplier-id]
+  [entity-type suppliers stores expense-categories expense-contexts articles n selected-supplier-id]
   (let [name-fn (get-in search/entity-type-config [entity-type :name-fn])
         base-items (case entity-type
                      :supplier suppliers
@@ -159,6 +159,7 @@
                                 stores)
                               stores)
                      :category expense-categories
+                     :expense-context expense-contexts
                      :article articles
                      [])]
     (->> base-items
@@ -177,7 +178,7 @@
                   last-price-supplier-name (assoc :last-price-supplier-display-name last-price-supplier-name))))))))
 
 (defn build-quick-pick-groups
-  [missing-types suppliers stores expense-categories articles selected-supplier-id]
+  [missing-types suppliers stores expense-categories expense-contexts articles selected-supplier-id]
   (let [limit (if (= 1 (count missing-types)) 10 5)]
     (->> missing-types
       (map (fn [entity-type]
@@ -186,6 +187,7 @@
                        suppliers
                        stores
                        expense-categories
+                       expense-contexts
                        articles
                        limit
                        selected-supplier-id)}))
@@ -228,12 +230,13 @@
       (str supplier-id "::" label))))
 
 (defn phase-two-quick-pick-groups
-  [missing-types context-suggestions suppliers stores expense-categories articles selected-supplier-id]
+  [missing-types context-suggestions suppliers stores expense-categories expense-contexts articles selected-supplier-id]
   (let [limit (if (= 1 (count missing-types)) 10 5)
         local-groups-by-type (->> (build-quick-pick-groups missing-types
                                     suppliers
                                     stores
                                     expense-categories
+                                    expense-contexts
                                     articles
                                     selected-supplier-id)
                                (map (juxt :entity-type identity))
@@ -309,6 +312,7 @@
                                     :supplier (:suppliers context-suggestions)
                                     :store (:stores context-suggestions)
                                     :category (:categories context-suggestions)
+                                    :expense-context (:expense-contexts context-suggestions)
                                     [])]
                 (cond
                   ;; Suppliers: prefer article-context suggestions and backfill the
@@ -342,6 +346,20 @@
                                  vec)]
                     (when (seq merged)
                       {:entity-type :category :items merged}))
+
+                  (= entity-type :expense-context)
+                  (let [wrap-context (fn [c]
+                                       {:id (:id c)
+                                        :label (or (:label c) (:name c) "")
+                                        :entity-type :expense-context
+                                        :entity c})
+                        history-items (mapv wrap-context raw-suggested)
+                        pool-items (mapv wrap-context expense-contexts)
+                        merged (->> (concat history-items pool-items)
+                                 (dedupe-by #(some-> (:id %) str))
+                                 vec)]
+                    (when (seq merged)
+                      {:entity-type :expense-context :items merged}))
 
                   ;; Other types keep the existing precedence: history
                   ;; suggestions win when present, otherwise fall back

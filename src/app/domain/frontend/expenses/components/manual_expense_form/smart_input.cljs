@@ -119,6 +119,7 @@
                                suppliers
                                stores
                                expense-categories
+                               expense-contexts
                                articles-with-prices
                                available-search-types
                                context)
@@ -175,6 +176,7 @@
                                           suppliers
                                           related-stores
                                           expense-categories
+                                          expense-contexts
                                           related-articles
                                           selected-supplier-id))
         focused-quick-pick-supplier-color-map (build-quick-pick-supplier-color-map
@@ -361,6 +363,7 @@
                                                       :store (or (:display-name entity)
                                                                (:display_name entity) text)
                                                       :category (or (:name entity) text)
+                                                      :expense-context (or (:name entity) text)
                                                       :article (or (:canonical-name entity)
                                                                  (:canonical_name entity) text)
                                                       text)]

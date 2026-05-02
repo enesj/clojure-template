@@ -56,19 +56,24 @@
         (is (= [:store :category :article] (mapv :entity-type inline-groups)))))))
 
 (deftest phase-two-missing-context-types-keep-category-available-after-dismiss
-  (testing "defaults sub-stage re-offers category until one is selected"
-    (is (= [:category]
+  (testing "defaults sub-stage re-offers category and optional expense context until selected"
+    (is (= [:category :expense-context]
           (smart-input/phase-two-missing-context-types {} :defaults)))
-    (is (= []
+    (is (= [:expense-context]
           (smart-input/phase-two-missing-context-types
             {:category {:id "cat-1"}}
+            :defaults)))
+    (is (= []
+          (smart-input/phase-two-missing-context-types
+            {:category {:id "cat-1"}
+             :expense-context {:id "ctx-1"}}
             :defaults))))
-  (testing "store-search keeps category alongside supplier/store gaps"
-    (is (= [:store :category]
+  (testing "store-search keeps category and expense context alongside supplier/store gaps"
+    (is (= [:store :category :expense-context]
           (smart-input/phase-two-missing-context-types
             {:supplier {:id "sup-1"}}
             :store-search)))
-    (is (= [:category]
+    (is (= [:category :expense-context]
           (smart-input/phase-two-missing-context-types
             {:supplier {:id "sup-1"}
              :store {:id "store-1"}}
@@ -209,6 +214,7 @@
                    stores
                    []
                    []
+                   []
                    "sup-1")]
       (is (= 1 (count groups)))
       (is (= :store (:entity-type (first groups))))
@@ -232,6 +238,7 @@
                    []
                    stores
                    categories
+                   []
                    articles
                    "sup-1")]
       (is (= [:store :category :article] (mapv :entity-type groups)))
@@ -239,25 +246,44 @@
       (is (= 5 (count (get-in groups [1 :items]))))
       (is (= 5 (count (get-in groups [2 :items])))))))
 
+(deftest build-quick-pick-groups-can-surface-expense-contexts
+  (testing "expense contexts participate in local quick picks when requested"
+    (let [expense-contexts [{:id "ctx-1" :name "Utilities"}
+                            {:id "ctx-2" :name "Subscriptions"}]
+          groups (smart-input-components/build-quick-pick-groups
+                   [:expense-context]
+                   []
+                   []
+                   []
+                   expense-contexts
+                   []
+                   nil)]
+      (is (= [:expense-context] (mapv :entity-type groups)))
+      (is (= ["ctx-1" "ctx-2"] (mapv :id (get-in groups [0 :items])))))))
+
 (deftest phase-two-quick-pick-groups-falls-back-per-missing-type
-  (testing "history suggestions apply per entity type so categories still fall back to local picks"
+  (testing "history suggestions apply per entity type so categories and expense contexts still fall back to local picks"
     (let [context-suggestions {:suppliers [{:id "sup-9"
                                             :label "Suggested Supplier"}]
                                :stores []
-                               :categories []}
+                               :categories []
+                               :expense-contexts []}
           categories (mapv (fn [n]
                              {:id (str "cat-" n)
                               :name (str "Category " n)})
                        (range 7))
+          expense-contexts [{:id "ctx-1" :name "Utilities"}
+                            {:id "ctx-2" :name "Subscriptions"}]
           groups (smart-input-components/phase-two-quick-pick-groups
-                   [:supplier :category]
+                   [:supplier :category :expense-context]
                    context-suggestions
                    []
                    []
                    categories
+                   expense-contexts
                    []
                    nil)]
-      (is (= [:supplier :category] (mapv :entity-type groups)))
+      (is (= [:supplier :category :expense-context] (mapv :entity-type groups)))
       (is (= ["sup-9"] (mapv :id (get-in groups [0 :items]))))
       (is (= 7 (count (get-in groups [1 :items])))
         "categories are not capped — all local categories appear")
@@ -273,6 +299,7 @@
           groups (smart-input-components/phase-two-quick-pick-groups
                    [:store]
                    context-suggestions
+                   []
                    []
                    []
                    []
@@ -293,6 +320,7 @@
                    local-stores
                    []
                    []
+                   []
                    "sup-1")]
       (is (= [:store] (mapv :entity-type groups)))
       (is (= ["local-bingo-1"] (mapv :id (get-in groups [0 :items])))))))
@@ -311,6 +339,7 @@
                    context-suggestions
                    []
                    local-stores
+                   []
                    []
                    []
                    "sup-1")]
@@ -335,6 +364,7 @@
                    context-suggestions
                    []
                    local
+                   []
                    []
                    []
                    "sup-1")
@@ -376,6 +406,7 @@
                  context-suggestions
                  suppliers
                  local-stores
+                 []
                  []
                  []
                  nil)

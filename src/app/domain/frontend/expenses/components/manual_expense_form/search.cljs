@@ -15,6 +15,8 @@
            :name-fn #(or (:display-name %) (:display_name %) "")}
    :category {:icon "📂" :label "Category" :color "purple"
               :name-fn #(or (:name %) "")}
+   :expense-context {:icon "🏷️" :label "Expense context" :color "violet"
+         :name-fn #(or (:name %) "")}
    :article {:icon "📦" :label "Article" :color "amber"
              :name-fn #(or (:canonical-name %) (:canonical_name %) "")}
    :payer {:icon "👤" :label "Payer" :color "teal"
@@ -115,7 +117,7 @@
 
 (def ^:private entity-type-order
   "Canonical round-robin order for interleaving mixed entity types."
-  [:supplier :store :category :article])
+  [:supplier :store :category :expense-context :article])
 
 (defn- result-score
   [result]
@@ -166,12 +168,12 @@
 
 (defn search-all-entities
   "Search across all entity types. Returns sorted results.
-   `entities` is {:suppliers [] :stores [] :categories [] :articles []}
+   `entities` is {:suppliers [] :stores [] :categories [] :expense-contexts [] :articles []}
    `opts` is {:selected-supplier-id id-or-nil} for store filtering."
   [query entities opts]
   (let [q (str/trim (str query))]
     (when (>= (count q) 2)
-      (let [{:keys [suppliers stores categories articles]} entities
+      (let [{:keys [suppliers stores categories expense-contexts articles]} entities
             {:keys [selected-supplier-id]} opts
             search-type (fn [items entity-type]
                           (let [{:keys [name-fn]} (get entity-type-config entity-type)]
@@ -202,6 +204,7 @@
                (search-type suppliers :supplier)
                (search-type filtered-stores :store)
                (search-type categories :category)
+           (search-type expense-contexts :expense-context)
                (search-type articles :article))
           (sort-by :score >)
           (take 10)

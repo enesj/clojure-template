@@ -369,6 +369,8 @@
         power-user? (boolean (use-subscribe [:expenses/power-user?]))
         can-upload? (boolean (use-subscribe [:expenses/can? :expenses/upload]))
         can-add-expense? (boolean (use-subscribe [:expenses/can? :expenses/expense.write]))
+      can-manage-expense-categories? (boolean (use-subscribe [:expenses/can? :expenses/expense-categories.manage]))
+      can-manage-expense-contexts? (boolean (use-subscribe [:expenses/can? :expenses/expense-contexts.manage]))
         [show-quick-add? set-show-quick-add!] (use-state false)
         user-name (or (:full-name user) "there")
         loading? (boolean (use-subscribe [:workspace-dashboard/loading?]))
@@ -502,6 +504,16 @@
                                :label (t :dashboard/add-expense)
                                :icon "✏️"
                                :on-click #(set-show-quick-add! true)}))
+            (when can-manage-expense-categories?
+              ($ shortcut-btn {:id "btn-shortcut-expense-categories"
+                               :label (t :expense-categories/title)
+                               :icon "🗂️"
+                               :on-click #(rf/dispatch [:navigate-to "/expense-categories"])}))
+            (when can-manage-expense-contexts?
+              ($ shortcut-btn {:id "btn-shortcut-expense-contexts"
+                               :label (t :expense-contexts/title)
+                               :icon "🏷️"
+                               :on-click #(rf/dispatch [:navigate-to "/expense-contexts"])}))
             ($ shortcut-btn {:id "btn-shortcut-reports"
                              :label (t :dashboard/view-reports)
                              :icon "📊"

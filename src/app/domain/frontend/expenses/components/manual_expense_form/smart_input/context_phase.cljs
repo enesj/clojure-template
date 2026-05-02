@@ -50,6 +50,7 @@
                                        suppliers
                                        stores
                                        expense-categories
+                                       expense-contexts
                                        articles
                                        selected-supplier-id))
         has-preselections? (or (seq context) payer-name purchased-date currency)]
@@ -212,6 +213,7 @@
                                               suppliers
                                               stores
                                               expense-categories
+                                              expense-contexts
                                               articles
                                               selected-supplier-id))
                     quick-pick-supplier-color-map (build-quick-pick-supplier-color-map

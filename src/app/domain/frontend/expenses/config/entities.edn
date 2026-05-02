@@ -7,6 +7,7 @@
  :manufacturers {:title "Manufacturers"},
  :payers {:title "Payers"},
  :categories {:title "Categories"},
+ :expense-contexts {:title "Expense Contexts"},
  :supplier-aliases {:title "Supplier Aliases"},
  :receipts {:title "Receipts"},
  :stores {:title "Stores"},

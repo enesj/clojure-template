@@ -134,3 +134,56 @@
                (fn [_] (throw (ex-info "boom" {:phase :admin-defaults})))}
               (fn []
                 (settings-bootstrap/bootstrap-runtime-configs! db))))))))
+
+(deftest bootstrap-backfills-expense-context-default-config-on-existing-user-rows
+  (testing "bootstrap additively reconciles stale user config with missing expense-contexts"
+    (let [db fixtures/*test-db*
+        stale-user-entities {:expenses {:title "Expenses"}}
+        stale-user-view-options {:expenses {:display-defaults {:show-filtering? true}}}
+        stale-user-table-columns {:suppliers {:available-columns ["display_name"]
+                               :default-visible-columns ["display_name"]
+                               :filterable-columns ["display_name"]
+                               :sortable-columns ["display_name"]
+                               :always-visible ["display_name"]}}
+        user-defaults {:entities {:expenses {:title "Expenses"}
+                       :expense-contexts {:title "Expense Contexts"}}
+               :view-options {:expense-contexts {:display-defaults {:show-add-button? true
+                                           :show-edit? true
+                                           :show-delete? true}
+                        :list-config {:form-display :modal
+                                 :disallowed-action-mode :disable
+                                 :action-gates {:add :expenses/expense-contexts.manage}}}}
+               :table-columns {:expense-contexts {:available-columns ["name" "description" "is_active" "created_at" "updated_at" "id" "tenant_id"]
+                                   :default-visible-columns ["name" "description" "is_active" "created_at"]
+                                   :filterable-columns ["name" "description" "is_active" "created_at"]
+                                   :sortable-columns ["name" "is_active" "created_at" "updated_at"]
+                                   :always-visible ["name"]
+                                   :column-metadata {:name {:label-key :common/name}
+                                               :description {:label-key :common/description}
+                                               :is_active {:label-key :common/active}}}
+                         :suppliers {:available-columns ["display_name"]
+                                   :default-visible-columns ["display_name"]
+                                   :filterable-columns ["display_name"]
+                                   :sortable-columns ["display_name"]
+                                   :always-visible ["display_name"]}}}]
+      (clear-runtime-configs! db)
+      (settings-io/write-user-entities! db stale-user-entities)
+      (settings-io/write-user-view-options! db stale-user-view-options)
+      (settings-io/write-user-table-columns! db stale-user-table-columns)
+      (clojure.core/with-redefs-fn
+        {#'settings-bootstrap/user-defaults (fn [config-key]
+                                 (get user-defaults config-key))
+         #'settings-bootstrap/admin-defaults (fn [_] {})}
+        (fn []
+          (is (= :ok (settings-bootstrap/bootstrap-runtime-configs! db)))
+          (is (= {:title "Expense Contexts"}
+              (get-in (settings-io/read-user-entities db) [:expense-contexts])))
+          (is (= :expenses/expense-contexts.manage
+              (get-in (settings-io/read-user-view-options db)
+              [:expense-contexts :list-config :action-gates :add])))
+          (is (= {:label-key :common/name}
+              (get-in (settings-io/read-user-table-columns db)
+              [:expense-contexts :column-metadata :name])))
+          (is (= ["display_name"]
+              (get-in (settings-io/read-user-table-columns db)
+              [:suppliers :available-columns]))))))))
