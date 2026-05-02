@@ -10,7 +10,8 @@
 (def ^:private refresh-filter-keys
   #{:months-back
     :supplier-id
-    :expense-category-id})
+    :expense-category-id
+    :expense-context-id})
 
 (defn- normalize-filter-value
   [k value]
@@ -18,6 +19,7 @@
     :months-back (h/->positive-int value 6)
     :supplier-id (h/normalize-id-filter value)
     :expense-category-id (h/normalize-id-filter value)
+    :expense-context-id (h/normalize-id-filter value)
     :day-of-week (some-> (h/->positive-int value nil) int)
     :amount-bucket (h/normalize-id value)
     :selected-day (h/normalize-month value)
@@ -31,7 +33,8 @@
           existing (or (get-in db (conj h/reports-path :filters)) {})
           filters (merge defaults (into {} (remove (comp nil? val) existing)))]
       {:db (assoc-in db (conj h/reports-path :filters) filters)
-       :dispatch-n [[:user-expenses/fetch-expense-categories]
+      :dispatch-n [[:user-expenses/fetch-expense-categories]
+              [:user-expenses/fetch-expense-contexts]
                     [:user-expenses/reports-refresh]]})))
 
 (rf/reg-event-fx
@@ -91,6 +94,7 @@
     {:db (-> db
            (assoc-in (conj h/reports-path :filters :supplier-id) nil)
            (assoc-in (conj h/reports-path :filters :expense-category-id) nil)
+           (assoc-in (conj h/reports-path :filters :expense-context-id) nil)
            (assoc-in (conj h/reports-path :filters :day-of-week) nil)
            (assoc-in (conj h/reports-path :filters :amount-bucket) nil)
            (assoc-in (conj h/reports-path :filters :selected-day) nil))

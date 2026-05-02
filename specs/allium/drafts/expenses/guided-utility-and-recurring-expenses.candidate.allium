@@ -1,0 +1,885 @@
+-- allium: 3
+-- guided-utility-and-recurring-expenses.candidate.allium
+--
+-- Scope: Guided manual entry for utility expenses and recurring/subscription-style expenses.
+--
+-- Includes:
+--   - Reusable ExpenseContext dimension for reporting/filtering expenses by purpose/location.
+--   - Utility expense workflow for manually entering one or more utility bill lines in one expense.
+--   - Expense templates for fast repeated manual entry.
+--   - Recurring expense templates that create reminders and prefilled drafts only.
+--   - Subscription & recurring UX vocabulary for mobile, AI, hosting, donations, and similar repeated costs.
+--   - Web and mobile availability for utility and recurring workflows, sharing the same domain rules.
+--
+-- Excludes:
+--   - Automatic creation of expenses from recurrence schedules.
+--   - Payment processing, unpaid/paid bill lifecycle, provider integrations, and account balance tracking.
+--   - Meter readings, consumption analytics, due-date enforcement, and utility-specific bill states.
+--   - Splitting a single line item across multiple contexts.
+--   - Receipt OCR parsing of utility bills.
+--
+-- Dependencies:
+--   - expense-entry.candidate.allium: normal Expense and ExpenseItem creation semantics.
+--   - settings-hierarchy.candidate.allium: default currency and manual expense currency behavior.
+--   - payer-and-defaults.candidate.allium: per-user default payer behavior.
+--
+-- Changes required in companion specs / implementation:
+--   - Expense gains an optional expense_context reference for reusable reporting/filtering.
+--   - Manual entry surfaces can create expenses from guided drafts as normal Expense + ExpenseItem records.
+--   - Expense list/report filters gain an optional ExpenseContext filter.
+--   - Article taxonomy should contain a Utilities category with utility subcategories such as Electricity,
+--     Water, Gas, and Heating.
+--
+-- Vocabulary decisions:
+--   - Domain name: Recurring expense.
+--   - UI label: Subscriptions & recurring.
+--   - Utility shortcuts such as "Home electricity" are templates, not categories.
+--   - Utility kind is classification (for example Utilities > Electricity).
+--   - Expense context is purpose/location (for example Home, Holiday house, Apartment for rent).
+
+use "./expense-entry.candidate.allium" as entry
+
+
+-- ─────────────────────────────────────────────
+-- External entities
+-- ─────────────────────────────────────────────
+
+external entity UUID {}
+external entity Date {}
+
+external entity Tenant {
+    id: UUID
+}
+
+external entity User {
+    id: UUID
+    tenant_id: UUID
+    membership_role: viewer | member | admin | owner
+    can_write_expenses: membership_role in {member, admin, owner}
+}
+
+external entity Payer {
+    id: UUID
+    tenant_id: UUID
+    label: String
+    is_active: Boolean
+}
+
+external entity Supplier {
+    id: UUID
+    display_name: String
+}
+
+external entity ExpenseCategory {
+    id: UUID
+    tenant_id: UUID
+    name: String
+    is_default: Boolean
+}
+
+external entity Category {
+    id: UUID
+    name: String
+}
+
+external entity Subcategory {
+    id: UUID
+    category: Category
+    name: String
+}
+
+external entity Article {
+    id: UUID
+    canonical_name: String
+    subcategory: Subcategory?
+}
+
+external entity Expense {
+    id: UUID
+    tenant_id: UUID
+    created_by: UUID?
+    supplier_id: UUID?
+    payer_id: UUID
+    expense_category_id: UUID?
+    expense_context_id: UUID?
+    purchased_at: Timestamp
+    total_amount: Decimal
+    currency: String
+    notes: String?
+}
+
+external entity ExpenseItem {
+    id: UUID
+    tenant_id: UUID
+    expense_id: UUID
+    article_id: UUID?
+    raw_label: String?
+    qty: Decimal?
+    unit_price: Decimal?
+    line_total: Decimal
+}
+
+external entity GlobalSettings {
+    default_currency: String
+    default_note: String?
+}
+
+external entity EnabledCurrency {
+    code: String
+    name: String
+}
+
+
+-- ─────────────────────────────────────────────
+-- Enumerations
+-- ─────────────────────────────────────────────
+
+enum ExpenseWorkflowKind { utility | recurring_prefill | template_prefill }
+
+enum ExpenseTemplateKind { utility | recurring | generic }
+
+enum RecurrenceFrequency { weekly | monthly | quarterly | yearly | custom }
+
+enum TemplateStatus { active | archived }
+
+enum ReminderStatus { pending | recorded | skipped | snoozed }
+
+
+-- ─────────────────────────────────────────────
+-- Value types
+-- ─────────────────────────────────────────────
+
+value GuidedExpenseLineDraft {
+    -- One line that will become one ExpenseItem.
+    -- For utilities, each line represents one bill/service: electricity, water, gas, heating, etc.
+    label: String
+    article: Article?
+    qty: Decimal = 1
+    unit_price: Decimal?
+    line_total: Decimal
+
+    requires: label.trim().length >= 1
+    requires: qty > 0
+    requires: line_total > 0
+}
+
+value TemplateLineDraft {
+    -- Stored line pattern for a reusable expense template.
+    label: String
+    article: Article?
+    default_amount: Decimal?
+
+    requires: label.trim().length >= 1
+    requires: default_amount = null or default_amount > 0
+}
+
+
+-- ─────────────────────────────────────────────
+-- Entities
+-- ─────────────────────────────────────────────
+
+entity ExpenseContext {
+    -- Reusable tenant-scoped reporting/filtering dimension.
+    -- Examples: Home, Holiday house, Apartment for rent, Business, Car, Personal.
+    tenant: Tenant
+    name: String
+    description: String?
+    is_active: Boolean = true
+    created_by: User?
+    created_at: Timestamp
+    updated_at: Timestamp
+}
+
+entity GuidedExpenseDraft {
+    -- Ephemeral guided-entry draft used by utility and recurring-prefill workflows.
+    tenant: Tenant
+    created_by: User
+    workflow_kind: ExpenseWorkflowKind
+    source_template: ExpenseTemplate?
+    source_reminder: RecurringExpenseReminder?
+
+    expense_category: ExpenseCategory?
+    expense_context: ExpenseContext?
+    supplier: Supplier?
+    payer: Payer?
+    purchased_at: Timestamp = now
+    currency: String = GlobalSettings.first.default_currency
+    notes: String? = GlobalSettings.first.default_note
+
+    lines: GuidedExpenseDraftLine with draft = this
+
+    computed_total: lines.sum(line => line.line_total)
+    has_lines: lines.count > 0
+    is_submittable: has_lines
+        and computed_total > 0
+        and payer != null
+        and purchased_at != null
+        and exists EnabledCurrency where code = currency
+}
+
+entity GuidedExpenseDraftLine {
+    draft: GuidedExpenseDraft
+    label: String
+    article: Article?
+    qty: Decimal = 1
+    unit_price: Decimal?
+    line_total: Decimal
+    sort_order: Integer
+}
+
+entity ExpenseTemplate {
+    -- Saved shortcut for repeated manual entry.
+    -- A utility template may be "Home electricity" or "May home utilities".
+    -- A recurring template may be "ChatGPT", "Hosting", "Mobile plan", or "Monthly donation".
+    tenant: Tenant
+    name: String
+    kind: ExpenseTemplateKind
+    status: TemplateStatus = active
+    created_by: User
+
+    default_expense_category: ExpenseCategory?
+    default_expense_context: ExpenseContext?
+    default_supplier: Supplier?
+    default_payer: Payer?
+    default_currency: String = GlobalSettings.first.default_currency
+    default_notes: String?
+
+    -- Recurrence is reminder/prefill only. It never creates an Expense automatically.
+    recurrence_frequency: RecurrenceFrequency?
+    recurrence_interval: Integer? = 1
+    next_due_date: Date?
+    reminder_days_before: Integer = 0
+
+    lines: ExpenseTemplateLine with template = this
+    active_lines: lines where is_active
+    is_recurring: kind = recurring
+    next_reminder_at: next_due_date - reminder_days_before.days
+}
+
+entity ExpenseTemplateLine {
+    template: ExpenseTemplate
+    label: String
+    article: Article?
+    default_amount: Decimal?
+    sort_order: Integer
+    is_active: Boolean = true
+}
+
+entity RecurringExpenseReminder {
+    -- A reminder tells the user that a recurring expense is due and can prefill manual entry.
+    -- It is not an expense and has no financial effect until the user records an expense.
+    template: ExpenseTemplate
+    due_date: Date
+    status: ReminderStatus = pending
+    reminded_at: Timestamp
+    snoozed_until: Timestamp?
+    recorded_expense: Expense?
+    skipped_at: Timestamp?
+}
+
+
+-- ─────────────────────────────────────────────
+-- Config
+-- ─────────────────────────────────────────────
+
+config {
+    utility_expense_category_name: String = "Utilities"
+    subscription_category_name: String = "Subscriptions"
+    subscription_recurring_label: String = "Subscriptions & recurring"
+    default_utility_context_required: Boolean = true
+    utility_subcategory_names: Set<String> = {"Electricity", "Water", "Gas", "Heating"}
+    recurring_reminder_horizon_days: Integer = 30
+}
+
+
+-- ─────────────────────────────────────────────
+-- Actors
+-- ─────────────────────────────────────────────
+
+actor ExpenseWriter {
+    identified_by: User where can_write_expenses
+    within: Tenant
+}
+
+actor ExpenseContextManager {
+    identified_by: User where membership_role in {admin, owner}
+    within: Tenant
+}
+
+
+-- ═════════════════════════════════════════════
+-- EXPENSE CONTEXTS
+-- ═════════════════════════════════════════════
+
+rule CreateExpenseContext {
+    when: UserCreatesExpenseContext(actor, tenant, name, description?)
+
+    requires: actor.tenant_id = tenant.id
+    requires: actor.membership_role in {admin, owner}
+    requires: name.trim().length >= 1
+    requires: not exists ExpenseContext where tenant = tenant and name = name.trim()
+
+    ensures: ExpenseContext.created(
+        tenant: tenant,
+        name: name.trim(),
+        description: description,
+        is_active: true,
+        created_by: actor,
+        created_at: now,
+        updated_at: now
+    )
+}
+
+rule RenameExpenseContext {
+    when: UserRenamesExpenseContext(actor, context, name)
+
+    requires: actor.tenant_id = context.tenant.id
+    requires: actor.membership_role in {admin, owner}
+    requires: name.trim().length >= 1
+    requires: not exists ExpenseContext where tenant = context.tenant and name = name.trim()
+
+    ensures:
+        context.name = name.trim()
+        context.updated_at = now
+}
+
+rule ArchiveExpenseContext {
+    when: UserArchivesExpenseContext(actor, context)
+
+    requires: actor.tenant_id = context.tenant.id
+    requires: actor.membership_role in {admin, owner}
+    requires: context.is_active
+
+    ensures:
+        context.is_active = false
+        context.updated_at = now
+
+    @guidance
+        -- Archiving a context hides it from new-entry dropdowns but preserves historical expenses.
+        -- Existing expenses keep their expense_context reference for reports.
+}
+
+
+-- ═════════════════════════════════════════════
+-- GUIDED UTILITY EXPENSE ENTRY
+-- ═════════════════════════════════════════════
+
+rule StartUtilityExpenseDraft {
+    when: UserStartsUtilityExpense(writer, tenant)
+
+    requires: writer.tenant_id = tenant.id
+
+    let utilities_category = ExpenseCategory where tenant_id = tenant.id
+        and name = config.utility_expense_category_name
+
+    ensures: GuidedExpenseDraft.created(
+        tenant: tenant,
+        created_by: writer,
+        workflow_kind: utility,
+        expense_category: utilities_category,
+        expense_context: null,
+        supplier: null,
+        payer: null,
+        purchased_at: now,
+        currency: GlobalSettings.first.default_currency,
+        notes: GlobalSettings.first.default_note
+    )
+
+    @guidance
+        -- The workflow starts in a utility-specific form, but the saved result is a normal Expense.
+        -- The utilities category should be preselected when available; if missing, the user can still
+        -- choose or create an appropriate category through normal reference-data management.
+}
+
+rule AddUtilityBillLine {
+    when: UserAddsUtilityBillLine(writer, draft, line)
+
+    requires: draft.created_by = writer
+    requires: draft.workflow_kind = utility
+    requires: line.line_total > 0
+
+    ensures: GuidedExpenseDraftLine.created(
+        draft: draft,
+        label: line.label,
+        article: line.article,
+        qty: line.qty,
+        unit_price: line.unit_price,
+        line_total: line.line_total,
+        sort_order: draft.lines.count + 1
+    )
+
+    @guidance
+        -- A single utility expense can contain several bills/services, for example electricity and water.
+        -- Each line should be classified by an Article whose subcategory is under Utilities when possible.
+}
+
+rule SubmitGuidedExpenseDraft {
+    when: UserSubmitsGuidedExpense(writer, draft)
+
+    requires: draft.created_by = writer
+    requires: draft.is_submittable
+    requires: draft.workflow_kind in {utility, recurring_prefill, template_prefill}
+    requires: exists EnabledCurrency where code = draft.currency
+    requires: not config.default_utility_context_required
+        or draft.workflow_kind != utility
+        or draft.expense_context != null
+
+    ensures:
+        let expense = Expense.created(
+            tenant_id: draft.tenant.id,
+            created_by: writer.id,
+            supplier_id: draft.supplier?.id,
+            payer_id: draft.payer.id,
+            expense_category_id: draft.expense_category?.id,
+            expense_context_id: draft.expense_context?.id,
+            purchased_at: draft.purchased_at,
+            total_amount: draft.computed_total,
+            currency: draft.currency,
+            notes: draft.notes
+        )
+        for line in draft.lines:
+            ExpenseItem.created(
+                tenant_id: draft.tenant.id,
+                expense_id: expense.id,
+                article_id: line.article?.id,
+                raw_label: line.label,
+                qty: line.qty,
+                unit_price: line.unit_price,
+                line_total: line.line_total
+            )
+        GuidedExpenseRecorded(draft: draft, expense: expense)
+
+    @guidance
+        -- This rule intentionally creates standard Expense and ExpenseItem records.
+        -- Utility-specific and recurring-specific workflows are input conveniences, not separate expense types.
+        -- If lines have different payment dates, payers, currencies, or contexts, the UI should guide the user
+        -- to record separate expenses instead of forcing unrelated costs into one expense.
+}
+
+
+-- ═════════════════════════════════════════════
+-- TEMPLATES AND RECURRING REMINDERS
+-- ═════════════════════════════════════════════
+
+rule CreateExpenseTemplate {
+    when: UserCreatesExpenseTemplate(writer, tenant, name, kind, lines)
+
+    requires: writer.tenant_id = tenant.id
+    requires: writer.can_write_expenses
+    requires: name.trim().length >= 1
+    requires: lines.count >= 1
+
+    ensures:
+        let template = ExpenseTemplate.created(
+            tenant: tenant,
+            name: name.trim(),
+            kind: kind,
+            status: active,
+            created_by: writer,
+            default_currency: GlobalSettings.first.default_currency
+        )
+        for line in lines:
+            ExpenseTemplateLine.created(
+                template: template,
+                label: line.label,
+                article: line.article,
+                default_amount: line.default_amount,
+                sort_order: line.sort_order,
+                is_active: true
+            )
+
+    @guidance
+        -- Template names may combine context and kind for user convenience, such as "Home electricity".
+        -- That name is only a shortcut label; reporting still uses separate classification and context fields.
+}
+
+rule ActivateRecurringTemplate {
+    when: UserSetsTemplateRecurrence(writer, template, frequency, interval, next_due_date, reminder_days_before)
+
+    requires: template.created_by.tenant_id = writer.tenant_id
+    requires: template.status = active
+    requires: interval >= 1
+    requires: reminder_days_before >= 0
+
+    ensures:
+        template.kind = recurring
+        template.recurrence_frequency = frequency
+        template.recurrence_interval = interval
+        template.next_due_date = next_due_date
+        template.reminder_days_before = reminder_days_before
+}
+
+rule CreateRecurringExpenseReminder {
+    when: template: ExpenseTemplate.next_reminder_at <= now
+
+    requires: template.status = active
+    requires: template.kind = recurring
+    requires: template.next_due_date != null
+    requires: not exists RecurringExpenseReminder{template: template, due_date: template.next_due_date}
+
+    ensures: RecurringExpenseReminder.created(
+        template: template,
+        due_date: template.next_due_date,
+        status: pending,
+        reminded_at: now
+    )
+
+    @guidance
+        -- This rule creates only a reminder. It does not create an Expense.
+        -- The user must explicitly open the reminder and submit the prefilled draft.
+}
+
+rule OpenRecurringExpensePrefill {
+    when: UserOpensRecurringExpenseReminder(writer, reminder)
+
+    requires: reminder.template.tenant.id = writer.tenant_id
+    requires: reminder.status in {pending, snoozed}
+
+    let template = reminder.template
+
+    ensures:
+        let draft = GuidedExpenseDraft.created(
+            tenant: template.tenant,
+            created_by: writer,
+            workflow_kind: recurring_prefill,
+            source_template: template,
+            source_reminder: reminder,
+            expense_category: template.default_expense_category,
+            expense_context: template.default_expense_context,
+            supplier: template.default_supplier,
+            payer: template.default_payer,
+            purchased_at: now,
+            currency: template.default_currency,
+            notes: template.default_notes
+        )
+        for line in template.active_lines:
+            GuidedExpenseDraftLine.created(
+                draft: draft,
+                label: line.label,
+                article: line.article,
+                qty: 1,
+                unit_price: line.default_amount,
+                line_total: line.default_amount ?? 0,
+                sort_order: line.sort_order
+            )
+
+    @guidance
+        -- Prefill is editable. The user can change amount, date, payer, context, supplier, or lines
+        -- before the normal expense is recorded.
+}
+
+rule MarkRecurringReminderRecorded {
+    when: GuidedExpenseRecorded(draft, expense)
+
+    requires: draft.workflow_kind = recurring_prefill
+    requires: draft.source_reminder != null
+
+    let reminder = draft.source_reminder
+    let template = reminder.template
+
+    ensures:
+        reminder.status = recorded
+        reminder.recorded_expense = expense
+        template.next_due_date = Recurrence.next_due_date(
+            frequency: template.recurrence_frequency,
+            interval: template.recurrence_interval,
+            from_date: template.next_due_date
+        )
+}
+
+rule SkipRecurringExpenseReminder {
+    when: UserSkipsRecurringExpenseReminder(writer, reminder)
+
+    requires: reminder.template.tenant.id = writer.tenant_id
+    requires: reminder.status = pending
+
+    ensures:
+        reminder.status = skipped
+        reminder.skipped_at = now
+        reminder.template.next_due_date = Recurrence.next_due_date(
+            frequency: reminder.template.recurrence_frequency,
+            interval: reminder.template.recurrence_interval,
+            from_date: reminder.template.next_due_date
+        )
+}
+
+rule SnoozeRecurringExpenseReminder {
+    when: UserSnoozesRecurringExpenseReminder(writer, reminder, until)
+
+    requires: reminder.template.tenant.id = writer.tenant_id
+    requires: reminder.status = pending
+    requires: until > now
+
+    ensures:
+        reminder.status = snoozed
+        reminder.snoozed_until = until
+}
+
+rule UnsnoozeRecurringExpenseReminder {
+    when: reminder: RecurringExpenseReminder.snoozed_until <= now
+
+    requires: reminder.status = snoozed
+
+    ensures:
+        reminder.status = pending
+        reminder.snoozed_until = null
+}
+
+
+-- ─────────────────────────────────────────────
+-- Invariants
+-- ─────────────────────────────────────────────
+
+invariant OneContextNamePerTenant {
+    for a in ExpenseContexts:
+        for b in ExpenseContexts:
+            a != b and a.tenant = b.tenant implies a.name != b.name
+}
+
+invariant OneReminderPerTemplateDueDate {
+    for a in RecurringExpenseReminders:
+        for b in RecurringExpenseReminders:
+            a != b implies not (a.template = b.template and a.due_date = b.due_date)
+}
+
+invariant RecurringTemplatesHaveSchedule {
+    for template in ExpenseTemplates:
+        template.kind = recurring implies template.recurrence_frequency != null and template.next_due_date != null
+}
+
+
+-- ═════════════════════════════════════════════
+-- SURFACES
+-- ═════════════════════════════════════════════
+
+surface ExpenseContextAdmin {
+    facing manager: ExpenseContextManager
+    context tenant: Tenant
+
+    exposes:
+        for context in ExpenseContext where tenant = tenant:
+            context.name
+            context.description
+            context.is_active
+
+    provides:
+        UserCreatesExpenseContext(manager, tenant, name: String, description: String?)
+        UserRenamesExpenseContext(manager, context: ExpenseContext, name: String)
+            when context.tenant = tenant and context.is_active
+        UserArchivesExpenseContext(manager, context: ExpenseContext)
+            when context.tenant = tenant and context.is_active
+
+    @guarantee ContextsAreReusable
+        -- Contexts are not utility-specific. They can classify groceries, maintenance,
+        -- insurance, car costs, business spending, utilities, subscriptions, and donations.
+
+    @guarantee ArchivedContextsRemainReportable
+        -- Archived contexts are hidden from new-entry choices but remain available in filters
+        -- when historical expenses reference them.
+}
+
+surface UtilityExpenseEntry {
+    facing writer: ExpenseWriter
+    context draft: GuidedExpenseDraft where workflow_kind = utility
+
+    exposes:
+        draft.expense_category
+        draft.expense_context
+        draft.supplier
+        draft.payer
+        draft.purchased_at
+        draft.currency
+        draft.notes
+        draft.lines
+        draft.computed_total
+        for context in ExpenseContext where tenant = draft.tenant and is_active:
+            context.name
+        for subcategory in Subcategory where subcategory.category.name = "Utilities":
+            subcategory.name
+
+    provides:
+        UserAddsUtilityBillLine(writer, draft, line: GuidedExpenseLineDraft)
+        UserSubmitsGuidedExpense(writer, draft)
+            when draft.is_submittable
+
+    @guarantee MultipleBillsOneExpense
+        -- The workflow allows one or more utility lines in a single expense.
+        -- Example: electricity + water + heating for the same home monthly entry.
+
+    @guarantee ClassificationAndContextAreSeparate
+        -- Utility kind is represented by the line/article classification under Utilities.
+        -- Property/purpose is represented by ExpenseContext.
+        -- The workflow must not create combined categories such as "Home electricity".
+
+    @guarantee NormalExpenseStorage
+        -- Submitting the utility workflow creates a standard Expense with standard ExpenseItems.
+        -- Reports can aggregate at expense level (Utilities), line level (Electricity),
+        -- and context level (Home, Holiday house, Apartment for rent).
+
+    @guarantee SeparatePaymentGuidance
+        -- If utility bills have different payers, currencies, dates, or contexts, the UI guides
+        -- the user to create separate expenses for cleaner reporting.
+
+    @guarantee PaidDateIsSufficientForFirstRelease
+        -- Utility entry uses purchased_at / paid date for first-release reporting.
+        -- Billing period and due date fields are not captured until utility-specific
+        -- analytics or bill-management behavior is needed.
+
+    @guarantee WebAndMobileAvailability
+        -- The utility expense workflow is available in both web and mobile clients.
+        -- Web may present the workflow as a modal or full page; mobile may present it as a
+        -- dedicated page in the mobile shell. Both clients submit the same guided draft model
+        -- and create the same standard Expense + ExpenseItem records.
+}
+
+surface SubscriptionsAndRecurringPage {
+    facing writer: ExpenseWriter
+    context tenant: Tenant
+
+    exposes:
+        for template in ExpenseTemplate where tenant = tenant and status = active:
+            template.name
+            template.kind
+            template.default_expense_category
+            template.default_expense_context
+            template.next_due_date
+            template.reminder_days_before
+        for reminder in RecurringExpenseReminder where template.tenant = tenant and status in {pending, snoozed}:
+            reminder.template.name
+            reminder.due_date
+            reminder.status
+            reminder.snoozed_until
+
+    provides:
+        UserCreatesExpenseTemplate(writer, tenant, name: String, kind: ExpenseTemplateKind,
+                                   lines: List<TemplateLineDraft>)
+        UserSetsTemplateRecurrence(writer, template: ExpenseTemplate, frequency: RecurrenceFrequency,
+                                   interval: Integer, next_due_date: Date, reminder_days_before: Integer)
+        UserOpensRecurringExpenseReminder(writer, reminder: RecurringExpenseReminder)
+            when reminder.status in {pending, snoozed}
+        UserSkipsRecurringExpenseReminder(writer, reminder: RecurringExpenseReminder)
+            when reminder.status = pending
+        UserSnoozesRecurringExpenseReminder(writer, reminder: RecurringExpenseReminder, until: Timestamp)
+            when reminder.status = pending
+
+    @guarantee ReminderOnlyForNow
+        -- Recurring templates produce reminders and prefilled manual-entry drafts only.
+        -- They never create expenses without explicit user confirmation.
+
+    @guarantee InAppReminderDeliveryOnly
+        -- Recurring reminders appear inside the app only for the first release.
+        -- No email, push, SMS, or other external notification is generated.
+
+    @guarantee BroadRecurringScope
+        -- The page covers subscription-like and recurring costs such as mobile, AI tools,
+        -- hosting, donations, insurance, memberships, and similar repeated expenses.
+
+    @guarantee DonationsNeedNotBeSubscriptionsCategory
+        -- A donation may be recurring without being categorized as Subscriptions.
+        -- Recurrence is a workflow/schedule property; category remains the spending type.
+
+    @guarantee MobileAndInternetDefaultToSubscriptions
+        -- Mobile plans, internet service, hosting, and AI tools default to the Subscriptions
+        -- category for this workflow, unless the user deliberately chooses another category.
+
+    @guarantee TemplatesAreTenantShared
+        -- Expense templates are shared at tenant/workspace level for the first release.
+        -- Personal/private templates are out of scope for now.
+
+    @guarantee WebAndMobileAvailability
+        -- The Subscriptions & recurring area is available in both web and mobile clients.
+        -- Client-specific layout may differ, but template management, reminder visibility,
+        -- skip/snooze actions, and prefill behavior share the same domain rules.
+}
+
+surface RecurringExpensePrefillForm {
+    facing writer: ExpenseWriter
+    context draft: GuidedExpenseDraft where workflow_kind = recurring_prefill
+
+    exposes:
+        draft.source_template.name
+        draft.source_reminder.due_date
+        draft.expense_category
+        draft.expense_context
+        draft.supplier
+        draft.payer
+        draft.purchased_at
+        draft.currency
+        draft.notes
+        draft.lines
+        draft.computed_total
+
+    provides:
+        UserSubmitsGuidedExpense(writer, draft)
+            when draft.is_submittable
+
+    @guarantee PrefillIsEditable
+        -- Template data is a starting point, not a forced value.
+        -- User may edit amount, date, payer, context, supplier, notes, currency, and lines before saving.
+
+    @guarantee RecordAdvancesSchedule
+        -- After a prefilled recurring draft is submitted, the related reminder is marked recorded
+        -- and the template advances to its next due date.
+
+    @guarantee WebAndMobilePrefillParity
+        -- Opening a recurring reminder produces an editable prefilled draft on both web and mobile.
+        -- Both clients allow the user to confirm or edit the same fields before saving.
+}
+
+surface ExpenseListAndReportsContextFilter {
+    facing viewer: User
+
+    exposes:
+        for context in ExpenseContext where tenant.id = viewer.tenant_id:
+            context.name
+            context.is_active
+
+    provides:
+        FilterExpensesByContext(viewer, context: ExpenseContext)
+        FilterExpensesByMissingContext(viewer)
+
+    @guarantee ContextFilterAppliesBroadly
+        -- The context filter applies to all expenses, not only utilities or recurring expenses.
+
+    @guarantee HistoricalArchivedContextsFilterable
+        -- Archived contexts are still available for filtering when matching historical expenses exist.
+}
+
+
+-- ═════════════════════════════════════════════
+-- DEFERRED
+-- ═════════════════════════════════════════════
+
+-- allium-ignore allium.deferred.missingLocationHint
+deferred Recurrence.next_due_date
+
+
+-- ═════════════════════════════════════════════
+-- RESOLVED DECISIONS
+-- ═════════════════════════════════════════════
+
+-- resolved: Utility bills remain normal expenses, not a separate expense type.
+-- resolved: Utility entry gets a specialized workflow to make manual entry easier.
+-- resolved: One utility expense may contain multiple utility bill lines.
+-- resolved: Utility kind and expense context are separate dimensions.
+-- resolved: Expense context is reusable across all expense categories.
+-- resolved: Expense context is stored at expense level for the first release; line items do not
+--           have separate context overrides.
+-- resolved: "Home electricity" is a template/shortcut label, not a category or subcategory.
+-- resolved: Expense templates are tenant-shared, not personal/private, for the first release.
+-- resolved: Recurring expenses create reminders and prefilled manual-entry drafts only for now.
+-- resolved: Recurring reminders are in-app only for the first release; no email/push delivery.
+-- resolved: Recurring/subscription-like examples include mobile, AI, hosting, and donations.
+-- resolved: Mobile, internet, hosting, and AI tools default to the Subscriptions category.
+-- resolved: Donations can be recurring without necessarily belonging to a Subscriptions category.
+-- resolved: Utility workflow uses purchased_at / paid date only for first-release reporting;
+--           billing period and due date are deferred.
+-- resolved: Utility and recurring workflows apply to both web and mobile clients, with shared
+--           domain rules and client-specific presentation only.
+
+
+-- ═════════════════════════════════════════════
+-- OPEN QUESTIONS
+-- ═════════════════════════════════════════════
+
+-- No open questions remain from the initial utility + recurring expense elicitation pass.

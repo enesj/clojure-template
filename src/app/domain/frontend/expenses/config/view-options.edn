@@ -176,6 +176,23 @@
                 :action-gates {:add :expenses/expense-categories.manage
                                :edit :expenses/expense-categories.manage
                                :delete :expenses/expense-categories.manage}}},
+ :expense-contexts
+ {:display-locks {},
+  :display-defaults
+  {:show-add-button? true,
+   :show-delete? true,
+   :show-edit? true,
+   :show-filtering? true,
+   :show-highlights? true,
+   :show-pagination? true,
+   :per-page 50},
+  :column-defaults {},
+  :column-locks {},
+  :list-config {:form-display :modal
+                :disallowed-action-mode :disable
+                :action-gates {:add :expenses/expense-contexts.manage
+                               :edit :expenses/expense-contexts.manage
+                               :delete :expenses/expense-contexts.manage}}},
  :unmapped-aliases
  {:display-defaults {:show-add-button? false,
                      :show-edit? false,

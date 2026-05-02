@@ -138,11 +138,15 @@
         receipt-category-id (or (:expense-category-id receipt)
                               (:expense_category_id receipt)
                               (:receipts/expense-category-id receipt))
+        receipt-context-id (or (:expense-context-id receipt)
+                 (:expense_context_id receipt)
+                 (:receipts/expense-context-id receipt))
         receipt-notes (or (:notes receipt)
                         (:receipts/notes receipt))]
     {:supplier_id supplier-id
      :payer_id payer-id
      :expense_category_id receipt-category-id
+           :expense_context_id receipt-context-id
      :purchased_at (datetime-local purchased-at true)
      :total_amount (if (number? total-amount) (format-decimal total-amount) "")
      :currency currency
@@ -213,6 +217,7 @@
       (let [supplier-id (or (:supplier-id expense) (:expenses/supplier-id expense))
             payer-id (or (:payer-id expense) (:expenses/payer-id expense))
             expense-category-id (or (:expense-category-id expense) (:expenses/expense-category-id expense))
+            expense-context-id (or (:expense-context-id expense) (:expenses/expense-context-id expense))
             purchased-at (or (:purchased-at expense) (:expenses/purchased-at expense))
             total-amount (or (:total-amount expense) (:expenses/total-amount expense))
             currency (or (:currency expense) "BAM")
@@ -224,6 +229,7 @@
         {:supplier_id supplier-id
          :payer_id payer-id
          :expense_category_id expense-category-id
+         :expense_context_id expense-context-id
          :purchased_at (datetime-local purchased-at true)
          :total_amount total-amount
          :currency currency
@@ -307,10 +313,12 @@
   (let [prepared-items (vec (prepare-line-items (:items values)))
         computed-total (line-items-total prepared-items)
         parsed-total (safe-parse-number (:total_amount values))
-        effective-total (or parsed-total (when (pos? computed-total) computed-total))]
+        effective-total (or parsed-total (when (pos? computed-total) computed-total))
+        expense-context-id (some-> (:expense_context_id values) str str/trim not-empty)]
     {:supplier_id (:supplier_id values)
      :payer_id (:payer_id values)
      :expense_category_id (:expense_category_id values)
+      :expense_context_id expense-context-id
      :purchased_at (:purchased_at values)
      :currency (:currency values)
      :notes (:notes values)

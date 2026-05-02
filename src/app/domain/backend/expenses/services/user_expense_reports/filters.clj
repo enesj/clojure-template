@@ -32,6 +32,16 @@
                                        [:is-not :e.expense_category_id nil])
                               :group-by [:e.expense_category_id :ec.name]
                               :order-by [[:ec.name :asc]]})
+        expense-contexts (shared/query-option-list
+                           db
+                           {:select [[:e.expense_context_id :id]
+                                     [[:coalesce :ctx.name [:inline "No context"]] :name]]
+                            :from [[:expenses :e]]
+                            :left-join [[:expense_contexts :ctx] [:= :ctx.id :e.expense_context_id]]
+                            :where (conj (shared/base-where user-id (dissoc opts :expense-context-id :expense-context-missing?))
+                                     [:is-not :e.expense_context_id nil])
+                            :group-by [:e.expense_context_id :ctx.name]
+                            :order-by [[:ctx.name :asc]]})
         categories (shared/query-option-list
                      db
                      {:select [[:c.id :id]
@@ -70,4 +80,5 @@
      :categories categories
      :subcategories subcategories
      :expense-categories expense-categories
+    :expense-contexts expense-contexts
      :manufacturers manufacturers}))

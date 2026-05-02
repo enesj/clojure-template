@@ -31,6 +31,7 @@
         suppliers (or (use-subscribe [:user-expenses/suppliers]) [])
         payers (or (use-subscribe [:user-expenses/payers]) [])
         expense-categories (or (use-subscribe [:user-expenses/expense-categories]) [])
+        expense-contexts (or (use-subscribe [:user-expenses/expense-contexts]) [])
         profile (or (use-subscribe [:profile/data]) {})
         enabled-currencies (currency-ui/enabled-currency-options profile)
         form-error (use-subscribe [:user-expenses/form-error])
@@ -43,8 +44,9 @@
                                :receipt receipt
                                :receipt-id receipt-id
                                :expense-categories expense-categories
+                                 :expense-contexts expense-contexts
                                :enabled-currencies enabled-currencies})
-                           [suppliers payers expense-categories enabled-currencies receipt receipt-id locale])
+                               [suppliers payers expense-categories expense-contexts enabled-currencies receipt receipt-id locale])
         fields-only-spec (use-memo
                            #(specs/get-expense-form-spec suppliers payers
                               {:receipt-approval? true
@@ -53,9 +55,10 @@
                                :receipt receipt
                                :receipt-id receipt-id
                                :expense-categories expense-categories
+                                 :expense-contexts expense-contexts
                                :enabled-currencies enabled-currencies
                                :exclude-line-items? true})
-                           [suppliers payers expense-categories enabled-currencies receipt receipt-id locale])
+                               [suppliers payers expense-categories expense-contexts enabled-currencies receipt receipt-id locale])
         line-items-spec (use-memo
                           #(vector (specs/build-line-items-field-spec locale))
                           [locale])
@@ -77,6 +80,7 @@
         (rf/dispatch [:user-expenses/fetch-suppliers {:limit 100 :offset 0}])
         (rf/dispatch [:user-expenses/fetch-payers {:limit 100 :offset 0}])
         (rf/dispatch [:user-expenses/fetch-expense-categories {:limit 500 :offset 0}])
+        (rf/dispatch [:user-expenses/fetch-expense-contexts {:limit 500 :offset 0}])
         (when-not (currency-ui/has-enabled-currencies? profile)
           (rf/dispatch [:profile/fetch]))
         js/undefined)

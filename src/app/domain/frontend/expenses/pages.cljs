@@ -10,6 +10,7 @@
     [app.domain.frontend.expenses.pages.user.categories :refer [categories-page]]
     [app.domain.frontend.expenses.pages.user.cities :refer [cities-page]]
     [app.domain.frontend.expenses.pages.user.expense-detail :refer [expense-detail-page]]
+    [app.domain.frontend.expenses.pages.user.expense-contexts :refer [expense-contexts-page]]
     [app.domain.frontend.expenses.pages.user.expense-categories :refer [expense-categories-page]]
     [app.domain.frontend.expenses.pages.user.expense-items :refer [expense-items-page]]
     [app.domain.frontend.expenses.pages.user.expense-reports :refer [expense-reports-page]]
@@ -45,6 +46,7 @@
    :user-profile profile-page
    :expense-suppliers suppliers-page
    :expense-payers payers-page
+  :expense-contexts expense-contexts-page
    :expense-stores stores-page
    :expense-store-aliases store-aliases-page
    :expense-items expense-items-page

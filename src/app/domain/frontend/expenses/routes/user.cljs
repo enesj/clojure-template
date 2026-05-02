@@ -67,6 +67,11 @@
     :view :expense-payers
     :controllers (controllers/user-guarded-start :page/init-expense-payers)}
 
+  :expense-contexts
+  {:name :expense-contexts
+   :view :expense-contexts
+   :controllers (controllers/user-guarded-start :page/init-expense-contexts)}
+
    :expense-stores
    {:name :expense-stores
     :view :expense-stores

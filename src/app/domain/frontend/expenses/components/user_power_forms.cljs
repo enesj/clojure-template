@@ -16,6 +16,8 @@
 (def user-category-edit-form-modal cf/user-category-edit-form-modal)
 (def user-expense-category-add-form-modal cf/user-expense-category-add-form-modal)
 (def user-expense-category-edit-form-modal cf/user-expense-category-edit-form-modal)
+(def user-expense-context-add-form-modal cf/user-expense-context-add-form-modal)
+(def user-expense-context-edit-form-modal cf/user-expense-context-edit-form-modal)
 (def user-subcategory-add-form-modal cf/user-subcategory-add-form-modal)
 (def user-subcategory-edit-form-modal cf/user-subcategory-edit-form-modal)
 

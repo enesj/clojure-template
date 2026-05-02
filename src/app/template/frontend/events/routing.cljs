@@ -129,6 +129,14 @@
                   [:user-expenses/fetch-payers]]}))
 
 (rf/reg-event-fx
+  :page/init-expense-contexts
+  common-interceptors
+  (fn [{:keys [db]} _]
+    {:db (assoc-in db (paths/current-page) :expense-contexts)
+     :dispatch-n [[:app.template.frontend.events.config/set-show-add-form false]
+                  [:app.template.frontend.events.config/set-editing nil]]}))
+
+(rf/reg-event-fx
   :page/init-expense-stores
   common-interceptors
   (fn [{:keys [db]} _]

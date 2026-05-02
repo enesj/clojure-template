@@ -143,17 +143,19 @@
   (when-not article-id
     (throw (ex-info "article-id is required" {:status 400})))
 
-  (jdbc/with-transaction [tx db]
-    (let [normalized-unit (or (normalize-unit unit) "kom")
-          inputs (raw-labels->seq raw-labels)
-          normalized (map (fn [raw]
-                            (let [raw* (when raw (str/trim raw))
-                                  n (normalization/normalize-alias-label raw*)]
-                              {:raw-label raw*
-                               :raw-label-normalized n
-                               :unit normalized-unit}))
-                       inputs)
-          step (reduce
+  (jdbc/transact
+    db
+    (fn [tx]
+      (let [normalized-unit (or (normalize-unit unit) "kom")
+        inputs (raw-labels->seq raw-labels)
+        normalized (map (fn [raw]
+                  (let [raw* (when raw (str/trim raw))
+                    n (normalization/normalize-alias-label raw*)]
+                  {:raw-label raw*
+                   :raw-label-normalized n
+                   :unit normalized-unit}))
+               inputs)
+        step (reduce
                  (fn [{:keys [seen] :as acc} {:keys [raw-label raw-label-normalized unit]}]
                    (cond
                      (str/blank? raw-label)
@@ -228,8 +230,8 @@
                   :conflicts []
                   :reassigned []}
                  normalized)
-          {:keys [created skipped conflicts reassigned]} step]
-      {:created created
-       :skipped skipped
-       :conflicts conflicts
-       :reassigned reassigned})))
+            {:keys [created skipped conflicts reassigned]} step]
+          {:created created
+           :skipped skipped
+           :conflicts conflicts
+           :reassigned reassigned}))))

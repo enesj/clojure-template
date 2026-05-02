@@ -66,20 +66,25 @@
         summary-loading? (boolean (use-subscribe [:user-expenses/report-summary-loading?]))
         by-supplier (or (use-subscribe [:user-expenses/by-supplier]) [])
         expense-categories-data (or (use-subscribe [:user-expenses/expense-categories]) [])
+        expense-contexts-data (or (use-subscribe [:user-expenses/expense-contexts]) [])
         template-expense-categories (or (use-subscribe [:app.template.frontend.subs.entity/entities :expense-categories]) [])
+        template-expense-contexts (or (use-subscribe [:app.template.frontend.subs.entity/entities :expense-contexts]) [])
 
         reports-filters (or (use-subscribe [:user-expenses/reports-filters]) {})
         months-back (or (:months-back reports-filters) 6)
         supplier-filter (:supplier-id reports-filters)
         expense-category-filter (:expense-category-id reports-filters)
+        expense-context-filter (:expense-context-id reports-filters)
         selected-supplier-ids (normalize-selected-ids supplier-filter)
         selected-expense-category-ids (normalize-selected-ids expense-category-filter)
+        selected-expense-context-ids (normalize-selected-ids expense-context-filter)
         selected-supplier-id (first selected-supplier-ids)
         selected-day-of-week (:day-of-week reports-filters)
         selected-bucket-key (:amount-bucket reports-filters)
         selected-day (:selected-day reports-filters)
         has-global-filters? (or (seq selected-supplier-ids)
-                              (seq selected-expense-category-ids))
+                              (seq selected-expense-category-ids)
+                              (seq selected-expense-context-ids))
 
         day-of-week-data (or (use-subscribe [:user-expenses/report-day-of-week]) [])
         day-of-week-loading? (boolean (use-subscribe [:user-expenses/report-day-of-week-loading?]))
@@ -110,10 +115,20 @@
                                                    {:id id :name name*}))))
                                        (sort-by (comp str/lower-case :name))
                                        vec)
+        expense-contexts-fallback* (->> (if (seq expense-contexts-data) expense-contexts-data template-expense-contexts)
+                   (keep (fn [row]
+                     (let [id (some-> (:id row) str)
+                     name* (some-> (:name row) str str/trim)]
+                       (when (and (seq id) (seq name*))
+                   {:id id :name name*}))))
+                   (sort-by (comp str/lower-case :name))
+                   vec)
 
         available-suppliers* (normalize-report-options (:suppliers report-filter-options))
         available-expense-categories* (normalize-report-options (or (:expense-categories report-filter-options)
                                                                   (:expense_categories report-filter-options)))
+        available-expense-contexts* (normalize-report-options (or (:expense-contexts report-filter-options)
+                      (:expense_contexts report-filter-options)))
 
         suppliers* (if filter-options-ready?
                      (merge-options-with-selected available-suppliers* suppliers-fallback* selected-supplier-ids)
@@ -121,6 +136,9 @@
         expense-categories* (if filter-options-ready?
                               (merge-options-with-selected available-expense-categories* expense-categories-fallback* selected-expense-category-ids)
                               expense-categories-fallback*)
+        expense-contexts* (if filter-options-ready?
+                (merge-options-with-selected available-expense-contexts* expense-contexts-fallback* selected-expense-context-ids)
+                expense-contexts-fallback*)
         supplier-name-by-id (into {} (map (juxt :id :name) suppliers*))
         selected-supplier-name (cond
                                  (> (count selected-supplier-ids) 1) (t :expense-reports/n-suppliers (count selected-supplier-ids))
@@ -192,7 +210,7 @@
                                :on-click #(rf/dispatch [:user-expenses/reports-clear-local-filters])}
                       (t :expense-reports/clear-filters)))))
 
-              ($ :div {:class "grid grid-cols-1 sm:grid-cols-3 gap-3"}
+              ($ :div {:class "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3"}
                 ($ :div {:class "space-y-1.5"}
                   ($ :label {:class "text-[10px] font-bold text-base-content/50 uppercase tracking-widest px-0.5" :for "reports-filter-months-back"} (t :expense-reports/filter-time-range))
                   ($ :select {:id "reports-filter-months-back"
@@ -231,6 +249,19 @@
                                           :selected-ids selected-expense-category-ids
                                           :on-change #(rf/dispatch [:user-expenses/reports-set-filter
                                                                     :expense-category-id
+                                                                    %])}))
+
+                ($ :div {:class "space-y-1.5"}
+                  ($ :label {:class "text-[10px] font-bold text-base-content/50 uppercase tracking-widest px-0.5"
+                             :for "reports-filter-expense-context-toggle"}
+                    (t :expense-reports/filter-expense-context))
+                  ($ report-multi-select {:id "reports-filter-expense-context"
+                                          :field-label (t :expense-reports/filter-expense-context)
+                                          :all-label (t :expense-reports/all-expense-contexts)
+                                          :options expense-contexts*
+                                          :selected-ids selected-expense-context-ids
+                                          :on-change #(rf/dispatch [:user-expenses/reports-set-filter
+                                                                    :expense-context-id
                                                                     %])})))))))
 
       ($ :main {:class "max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8"}

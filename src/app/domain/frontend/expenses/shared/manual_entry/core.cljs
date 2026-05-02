@@ -89,6 +89,7 @@
       (:supplier context) (assoc :supplier_id (get-in context [:supplier :id]))
       (:store context) (assoc :store_id (get-in context [:store :id]))
       (:category context) (assoc :expense_category_id (get-in context [:category :id]))
+      (:expense-context context) (assoc :expense_context_id (get-in context [:expense-context :id]))
       (not (str/blank? notes)) (assoc :notes notes))))
 
 (defn ensure-unknown-context

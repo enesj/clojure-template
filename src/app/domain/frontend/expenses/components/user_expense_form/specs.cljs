@@ -73,7 +73,7 @@
   Optional opts support the receipt-approval UX."
   ([suppliers payers]
    (get-expense-form-spec suppliers payers {}))
-  ([suppliers payers {:keys [locale receipt-approval? supplier-guess receipt receipt-id exclude-line-items? expense-categories enabled-currencies]
+  ([suppliers payers {:keys [locale receipt-approval? supplier-guess receipt receipt-id exclude-line-items? expense-categories expense-contexts enabled-currencies]
                       :as opts}]
    (let [receipt-id* (or receipt-id (:id receipt))
          receipt-id-str (some-> receipt-id* str)
@@ -126,6 +126,15 @@
                            {:value (:id c)
                             :label (:name c)})
                       (or expense-categories []))}
+              {:id :expense_context_id
+               :type :select
+               :label (localized-field-label locale :expense_context_id "Expense context")
+               :required false
+               :placeholder (translated-copy locale :common/optional "Optional")
+               :options (map (fn [c]
+                   {:value (:id c)
+                    :label (:name c)})
+                  (or expense-contexts []))}
           {:id :purchased_at
            :type :datetime-local
            :label (localized-field-label locale :purchased_at "Purchased at")

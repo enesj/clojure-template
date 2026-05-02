@@ -9,6 +9,7 @@
     [app.domain.backend.expenses.handlers.user-articles :as user-articles]
     [app.domain.backend.expenses.handlers.user-categories :as user-categories]
     [app.domain.backend.expenses.handlers.user-cities :as user-cities]
+     [app.domain.backend.expenses.handlers.user-expense-contexts :as user-expense-contexts]
     [app.domain.backend.expenses.handlers.user-expense-categories :as user-expense-categories]
     [app.domain.backend.expenses.handlers.user-expenses.article-aliases :as user-expenses-article-aliases]
     [app.domain.backend.expenses.handlers.user-expenses.batch :as user-expenses-batch]
@@ -63,7 +64,17 @@
     ["/by-category" {:get {:handler (user-expenses-reports/by-category-handler db)}}]
     ["/filter-options" {:get {:handler (user-expenses-reports/filter-options-handler db)}}]]
 
-   ;; Reference data endpoints (suppliers, payers)
+     ;; Expense contexts (admin/owner manage, reference-readable for members/viewers)
+     ["/expense-contexts"
+      ["" {:get {:handler (user-expense-contexts/list-expense-contexts-handler db)}
+               :post {:handler (user-expense-contexts/create-expense-context-handler db)}}]
+
+      ["/batch" {:delete {:handler (user-expense-contexts/batch-delete-expense-contexts-handler db)}}]
+
+      ["/:id" {:put {:handler (user-expense-contexts/update-expense-context-handler db)}}]]
+
+     ;; Reference data endpoints (suppliers, payers)
+
    ["/suppliers"
     {:get {:handler (user-expenses-reference-data/list-suppliers-handler db)}
      :post {:handler (user-expenses-reference-data/create-supplier-handler db)}}]

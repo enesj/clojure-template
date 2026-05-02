@@ -98,6 +98,13 @@
     :expense-categories/delete-title      "Obriši kategoriju troška"
     :expense-categories/delete-msg        "Želite li obrisati ovu kategoriju troška?"
 
+    ;; Expense contexts page
+    :expense-contexts/title               "Konteksti troškova"
+    :expense-contexts/subtitle            "Konteksti poput doma, nekretnine, projekta ili režija za izvještaje i filtere."
+    :expense-contexts/btn-dashboard       "Nadzorna ploča"
+    :expense-contexts/delete-title        "Obriši kontekst troška"
+    :expense-contexts/delete-msg          "Želite li obrisati ovaj kontekst troška? Ako se već koristi, radije ga deaktivirajte."
+
     ;; Cities page
     :cities/title                         "Gradovi"
     :cities/subtitle                      "Katalog gradova (globalni; admin zaključan)."
@@ -217,6 +224,13 @@
     :expense-categories/btn-dashboard     "Dashboard"
     :expense-categories/delete-title      "Delete expense category"
     :expense-categories/delete-msg        "Do you want to delete this expense category?"
+
+    ;; Expense contexts page
+    :expense-contexts/title               "Expense Contexts"
+    :expense-contexts/subtitle            "Contexts such as home, property, project, or utilities for reporting and filters."
+    :expense-contexts/btn-dashboard       "Dashboard"
+    :expense-contexts/delete-title        "Delete expense context"
+    :expense-contexts/delete-msg          "Do you want to delete this expense context? If it is already used, deactivate it instead."
 
     ;; Cities page
     :cities/title                         "Cities"

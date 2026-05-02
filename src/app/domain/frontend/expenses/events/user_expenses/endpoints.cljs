@@ -18,6 +18,8 @@
 
 (def reports-filter-options-endpoint (str reports-endpoint "/filter-options"))
 
+(def expense-contexts-endpoint (api/versioned-endpoint "/expenses/expense-contexts"))
+
 (def suppliers-endpoint (api/versioned-endpoint "/expenses/suppliers"))
 
 (def stores-endpoint (api/versioned-endpoint "/expenses/stores"))

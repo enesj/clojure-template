@@ -180,11 +180,12 @@
    :created_at {:label-key :common/created-at}}},
  :expenses
  {:available-columns
-  ["purchased_at" "supplier_display_name" "store_display_name" "expense_category_name" "payer_label" "currency" "total_amount" "item_count" "notes" "id" "created_at" "updated_at" "tenant_id" "receipt_id" "store_id" "supplier_id" "payer_id" "expense_category_id"],
+  ["purchased_at" "supplier_display_name" "store_display_name" "expense_category_name" "expense_context_name" "payer_label" "currency" "total_amount" "item_count" "notes" "id" "created_at" "updated_at" "tenant_id" "receipt_id" "store_id" "supplier_id" "payer_id" "expense_category_id" "expense_context_id"],
   :computed-fields
   {:supplier_display_name {:type "string", :label "Supplier"}
    :store_display_name {:type "string", :label "Store"}
    :expense_category_name {:type "string", :label "Expense Category"}
+  :expense_context_name {:type "string", :label "Expense Context"}
    :item_count {:label-key :common/items
                 :type :number
                 :admin {:visible-in-table? true
@@ -196,6 +197,7 @@
    "supplier_display_name"
    "store_display_name"
    "expense_category_name"
+  "expense_context_name"
    "payer_label"
    "currency"
     "total_amount"
@@ -205,6 +207,7 @@
    "supplier_display_name"
    "store_display_name"
    "expense_category_name"
+  "expense_context_name"
    "payer_label"
    "currency"
    "total_amount"
@@ -215,6 +218,7 @@
    "supplier_display_name"
    "store_display_name"
    "expense_category_name"
+  "expense_context_name"
    "payer_label"
    "currency"
    "total_amount"
@@ -226,9 +230,11 @@
                   :supplier_id {:type "text"}
                   :payer_id {:type "text"}
                   :store_id {:type "text"}
-                  :expense_category_id {:type "text"}},
+                  :expense_category_id {:type "text"}
+                  :expense_context_id {:type "text"}},
   :column-metadata
   {:expense_category_name {:label-key :common/expense-category}
+   :expense_context_name {:label-key :common/expense-context}
    :payer_label {:label-key :common/payer}
    :supplier_display_name {:label-key :common/supplier}
    :updated_at {:label-key :common/updated-at}
@@ -244,6 +250,7 @@
    :store_id {:label-key :common/store-id}
    :payer_id {:label-key :common/payer-id}
    :expense_category_id {:label-key :common/expense-category-id}
+  :expense_context_id {:label-key :common/expense-context-id}
    :receipt_id {:label-key :common/receipt-id}}},
  :manufacturers
  {:available-columns
@@ -543,6 +550,19 @@
   {:name {:label-key :common/expense-category-name},
    :exclude_from_reports {:label "Exclude from reports"},
    :is_default {:label-key :common/is-default},
+   :created_at {:label-key :common/created-at},
+   :updated_at {:label-key :common/updated-at},
+   :id {:label-key :common/id}}},
+ :expense-contexts
+ {:available-columns ["name" "description" "is_active" "created_at" "updated_at" "id" "tenant_id"],
+  :default-visible-columns ["name" "description" "is_active" "created_at"],
+  :filterable-columns ["name" "description" "is_active" "created_at"],
+  :sortable-columns ["name" "is_active" "created_at" "updated_at"],
+  :always-visible ["name"],
+  :column-metadata
+  {:name {:label-key :common/name},
+   :description {:label-key :common/description},
+   :is_active {:label-key :common/active},
    :created_at {:label-key :common/created-at},
    :updated_at {:label-key :common/updated-at},
    :id {:label-key :common/id}}}}

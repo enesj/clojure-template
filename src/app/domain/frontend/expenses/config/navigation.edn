@@ -17,6 +17,7 @@
    :items [{:id :suppliers :label "Dobavljači"}
            {:id :payers :label "Kupci"}
            {:id :expense-categories :label "Kategorije troškova"}
+           {:id :expense-contexts :label "Konteksti troškova"}
            {:id :stores :label "Trgovine"}]}
   {:id :workspace
    :title "Radni prostor"

@@ -14,6 +14,10 @@
    :manufacturer config-maps/manufacturer-config
    :category config-maps/category-config
    :expense-category config-maps/expense-category-config
+  :expense-context config-maps/expense-context-config
+  :expense-template config-maps/expense-template-config
+  :expense-template-line config-maps/expense-template-line-config
+  :recurring-expense-reminder config-maps/recurring-expense-reminder-config
    :city config-maps/city-config
    :subcategory config-maps/subcategory-config
    :payer config-maps/payer-config

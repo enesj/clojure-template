@@ -287,6 +287,111 @@
    :has-search? true
    :has-count? true})
 
+(def expense-context-config
+  {:table-name "expense_contexts"
+   :primary-key :id
+   :tenant-scoped? true
+   :required-fields [:name]
+   :allowed-order-by {:name :name
+                      :is-active :is_active
+                      :created-at :created_at
+                      :updated-at :updated_at}
+   :default-order-by :name
+   :search-fields [:name :description]
+   :before-insert (fn [data]
+                    (-> data
+                      (assoc :id (UUID/randomUUID))
+                      (update :is_active #(if (nil? %) true (boolean %)))))
+   :before-update (fn [_id updates]
+                    (cond-> updates
+                      (contains? updates :is_active)
+                      (update :is_active boolean)))
+   :has-search? true
+   :has-count? true})
+
+(def expense-template-config
+  {:table-name "expense_templates"
+   :primary-key :id
+   :tenant-scoped? true
+   :required-fields [:name :kind]
+   :allowed-order-by {:name :name
+                      :kind :kind
+                      :status :status
+                      :next-due-date :next_due_date
+                      :created-at :created_at
+                      :updated-at :updated_at}
+   :default-order-by :name
+   :search-fields [:name :default_notes]
+   :text-filter-columns {:kind :kind
+                         :status :status}
+   :before-insert (fn [data]
+                    (-> data
+                      (assoc :id (UUID/randomUUID))
+                      (update :kind #(vector :cast (or % "generic") :expense_template_kind))
+                      (update :status #(vector :cast (or % "active") :expense_template_status))
+                      (update :default_currency #(when % [:cast % :currency]))
+                      (update :recurrence_frequency #(when % [:cast % :recurrence_frequency]))))
+   :before-update (fn [_id updates]
+                    (cond-> updates
+                      (contains? updates :kind)
+                      (update :kind #(when % [:cast % :expense_template_kind]))
+
+                      (contains? updates :status)
+                      (update :status #(when % [:cast % :expense_template_status]))
+
+                      (contains? updates :default_currency)
+                      (update :default_currency #(when % [:cast % :currency]))
+
+                      (contains? updates :recurrence_frequency)
+                      (update :recurrence_frequency #(when % [:cast % :recurrence_frequency]))))
+   :has-search? true
+   :has-count? true})
+
+(def expense-template-line-config
+  {:table-name "expense_template_lines"
+   :primary-key :id
+   :required-fields [:template_id :label]
+   :allowed-order-by {:label :label
+                      :sort-order :sort_order
+                      :is-active :is_active
+                      :created-at :created_at
+                      :updated-at :updated_at}
+   :default-order-by :sort_order
+   :search-fields [:label]
+   :before-insert (fn [data]
+                    (-> data
+                      (assoc :id (UUID/randomUUID))
+                      (update :is_active #(if (nil? %) true (boolean %)))))
+   :before-update (fn [_id updates]
+                    (cond-> updates
+                      (contains? updates :is_active)
+                      (update :is_active boolean)))
+   :has-search? true
+   :has-count? true})
+
+(def recurring-expense-reminder-config
+  {:table-name "recurring_expense_reminders"
+   :primary-key :id
+   :required-fields [:template_id :due_date]
+   :allowed-order-by {:due-date :due_date
+                      :status :status
+                      :reminded-at :reminded_at
+                      :snoozed-until :snoozed_until
+                      :created-at :created_at
+                      :updated-at :updated_at}
+   :default-order-by :due_date
+   :search-fields []
+   :text-filter-columns {:status :status}
+   :before-insert (fn [data]
+                    (-> data
+                      (assoc :id (UUID/randomUUID))
+                      (update :status #(vector :cast (or % "pending") :recurring_expense_reminder_status))))
+   :before-update (fn [_id updates]
+                    (cond-> updates
+                      (contains? updates :status)
+                      (update :status #(when % [:cast % :recurring_expense_reminder_status]))))
+   :has-count? true})
+
 (def city-config
   {:table-name "cities"
    :primary-key :id

@@ -118,6 +118,53 @@
   "Roles allowed to create or delete payers (admin and owner only)."
   #{"admin" "owner"})
 
+(defn list-expense-contexts-handler
+  "Handler factory for listing tenant expense contexts available to users.
+
+  By default this returns active contexts for new-entry forms. Pass
+  `include_inactive=true` when historical filter UIs need archived/inactive
+  contexts too."
+  [db]
+  (fn [request]
+    (if-let [_user-id (h/get-user-id request)]
+      (if-let [forbidden (h/ensure-role request h/reference-data-read-roles "Role assignment required")]
+        forbidden
+        (let [tenant-id (h/get-tenant-id request)]
+          (try
+            (let [params (:query-params request)
+                  limit (h/parse-page-limit params 100)
+                  offset (h/parse-page-offset params)
+                  search (h/get-param params :search)
+                  sort-opts (h/parse-sort-params params)
+                  include-inactive? (true? (h/parse-boolean-param params :include_inactive))
+                  extra-filters (when-not include-inactive?
+                                  [[:= :is_active true]])
+                  opts (cond-> {:limit limit
+                                :offset offset}
+                         tenant-id (assoc :tenant-id tenant-id)
+                         (some? search) (assoc :search search)
+                         (seq sort-opts) (merge sort-opts)
+                         (seq extra-filters) (assoc :extra-filters extra-filters))
+                  list-contexts (resolve-service-op-fn
+                                  'app.domain.backend.expenses.services.expense-contexts
+                                  :list
+                                  'list-expense-contexts)
+                  count-contexts (resolve-service-op-fn
+                                   'app.domain.backend.expenses.services.expense-contexts
+                                   :count
+                                   'count-expense-contexts)
+                  contexts (vec (list-contexts db opts))
+                  total (long (or (count-contexts db (select-keys opts [:search :tenant-id :extra-filters]))
+                                0))]
+              (h/json-response {:data contexts
+                                :total total
+                                :limit limit
+                                :offset offset}))
+            (catch Exception e
+              (log/error e "Error listing expense contexts")
+              (h/json-response {:error "Failed to list expense contexts"} 500)))))
+      (h/unauthorized-response))))
+
 (defn list-payers-handler
   "Handler factory for listing payers available to users (tenant-scoped).
    Includes :user_payer_id in the response so the frontend can identify

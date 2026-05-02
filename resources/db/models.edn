@@ -206,6 +206,9 @@
    [:expense_category_id
     :uuid
     {:foreign-key :expense_categories/id, :on-delete :set-null}]
+   [:expense_context_id
+    :uuid
+    {:foreign-key :expense_contexts/id, :on-delete :set-null}]
    [:purchased_at :timestamptz {:null false}]
    [:total_amount [:decimal 12 2] {:null false}]
    [:currency [:enum :currency] {:null false, :default "BAM"}]
@@ -234,6 +237,9 @@
    [:idx_expenses_expense_category
     :btree
     {:fields [:expense_category_id]}]
+   [:idx_expenses_expense_context
+    :btree
+    {:fields [:expense_context_id]}]
    [:idx_expenses_purchased_at :btree {:fields [:purchased_at]}]]},
  :onboarding_steps
  {:fields
@@ -416,6 +422,63 @@
    [:idx_payment_provider_account_links_status
     :btree
     {:fields [:status]}]]},
+ :recurring_expense_reminders
+ {:fields
+  [[:id :uuid {:primary-key true}]
+   [:template_id
+    :uuid
+    {:foreign-key :expense_templates/id,
+     :null false,
+     :on-delete :cascade}]
+   [:due_date :date {:null false}]
+   [:status
+    [:enum :recurring-expense-reminder-status]
+    {:null false, :default "pending"}]
+   [:reminded_at :timestamptz {:default [:now]}]
+   [:snoozed_until :timestamptz]
+   [:recorded_expense_id
+    :uuid
+    {:foreign-key :expenses/id, :on-delete :set-null}]
+   [:skipped_at :timestamptz]
+   [:created_at :timestamptz {:default [:now]}]
+   [:updated_at :timestamptz {:default [:now]}]],
+  :types
+  [[:recurring-expense-reminder-status
+    :enum
+    {:choices ["pending" "recorded" "skipped" "snoozed"]}]],
+  :indexes
+  [[:uniq_recurring_expense_reminders_template_due
+    :btree
+    {:fields [:template_id :due_date], :unique true}]
+   [:idx_recurring_expense_reminders_template_status
+    :btree
+    {:fields [:template_id :status]}]
+   [:idx_recurring_expense_reminders_snoozed_until
+    :btree
+    {:fields [:snoozed_until]}]
+   [:idx_recurring_expense_reminders_recorded_expense
+    :btree
+    {:fields [:recorded_expense_id]}]]},
+ :expense_contexts
+ {:fields
+  [[:id :uuid {:primary-key true}]
+   [:tenant_id
+    :uuid
+    {:foreign-key :tenants/id, :null false, :on-delete :cascade}]
+   [:name [:varchar 255] {:null false}]
+   [:description :text]
+   [:is_active :boolean {:null false, :default true}]
+   [:created_by_subject_ref [:varchar 64]]
+   [:created_at :timestamptz {:default [:now]}]
+   [:updated_at :timestamptz {:default [:now]}]],
+  :indexes
+  [[:idx_expense_contexts_tenant :btree {:fields [:tenant_id]}]
+   [:idx_expense_contexts_tenant_name
+    :btree
+    {:fields [:tenant_id :name], :unique true}]
+   [:idx_expense_contexts_tenant_active
+    :btree
+    {:fields [:tenant_id :is_active]}]]},
  :admin_sessions
  {:fields
   [[:id :uuid {:primary-key true}]
@@ -532,6 +595,61 @@
     :btree
     {:fields [:email_lookup_hash]}]
    [:idx_admin_invitations_status :btree {:fields [:status]}]]},
+ :expense_templates
+ {:fields
+  [[:id :uuid {:primary-key true}]
+   [:tenant_id
+    :uuid
+    {:foreign-key :tenants/id, :null false, :on-delete :cascade}]
+   [:name [:varchar 255] {:null false}]
+   [:kind
+    [:enum :expense-template-kind]
+    {:null false, :default "generic"}]
+   [:status
+    [:enum :expense-template-status]
+    {:null false, :default "active"}]
+   [:created_by_subject_ref [:varchar 64]]
+   [:default_expense_category_id
+    :uuid
+    {:foreign-key :expense_categories/id, :on-delete :set-null}]
+   [:default_expense_context_id
+    :uuid
+    {:foreign-key :expense_contexts/id, :on-delete :set-null}]
+   [:default_supplier_id
+    :uuid
+    {:foreign-key :suppliers/id, :on-delete :set-null}]
+   [:default_payer_id
+    :uuid
+    {:foreign-key :payers/id, :on-delete :set-null}]
+   [:default_currency [:enum :currency] {:null false, :default "BAM"}]
+   [:default_notes :text]
+   [:recurrence_frequency [:enum :recurrence-frequency]]
+   [:recurrence_interval :integer {:default 1}]
+   [:next_due_date :date]
+   [:reminder_days_before :integer {:null false, :default 0}]
+   [:created_at :timestamptz {:default [:now]}]
+   [:updated_at :timestamptz {:default [:now]}]],
+  :types
+  [[:expense-template-kind
+    :enum
+    {:choices ["utility" "recurring" "generic"]}]
+   [:expense-template-status :enum {:choices ["active" "archived"]}]
+   [:recurrence-frequency
+    :enum
+    {:choices ["weekly" "monthly" "quarterly" "yearly" "custom"]}]],
+  :indexes
+  [[:idx_expense_templates_tenant_status
+    :btree
+    {:fields [:tenant_id :status]}]
+   [:idx_expense_templates_tenant_kind
+    :btree
+    {:fields [:tenant_id :kind]}]
+   [:idx_expense_templates_tenant_name
+    :btree
+    {:fields [:tenant_id :name]}]
+   [:idx_expense_templates_due
+    :btree
+    {:fields [:tenant_id :status :next_due_date]}]]},
  :audit_logs
  {:fields
   [[:id :uuid {:primary-key true}]
@@ -749,6 +867,30 @@
    [:idx_dedup_ignored_clusters_admin_entity
     :btree
     {:fields [:admin_id :entity_type]}]]},
+ :expense_template_lines
+ {:fields
+  [[:id :uuid {:primary-key true}]
+   [:template_id
+    :uuid
+    {:foreign-key :expense_templates/id,
+     :null false,
+     :on-delete :cascade}]
+   [:label [:varchar 255] {:null false}]
+   [:article_id
+    :uuid
+    {:foreign-key :articles/id, :on-delete :set-null}]
+   [:default_amount [:decimal 12 2]]
+   [:sort_order :integer {:null false, :default 0}]
+   [:is_active :boolean {:null false, :default true}]
+   [:created_at :timestamptz {:default [:now]}]
+   [:updated_at :timestamptz {:default [:now]}]],
+  :indexes
+  [[:idx_expense_template_lines_template_order
+    :btree
+    {:fields [:template_id :sort_order]}]
+   [:idx_expense_template_lines_article
+    :btree
+    {:fields [:article_id]}]]},
  :backlog
  {:fields
   [[:number :integer {:primary-key true}]

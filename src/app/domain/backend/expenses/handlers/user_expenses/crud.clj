@@ -32,6 +32,7 @@
                   text-filters (h/extract-text-filter-params params
                                  [:supplier-display-name :store-display-name
                                   :expense-category-name :payer-label
+                                  :expense-context-name
                                   :notes])
                   ;; Support both legacy :from/:to and new :purchased-at-from/:purchased-at-to
                   purchased-from (or (h/get-param params :purchased-at-from) (h/get-param params :from))
@@ -41,6 +42,9 @@
                   currency-filter (h/get-param params :currency)
                   total-amount-min (parse-decimal-param (h/get-param params :total-amount-min))
                   total-amount-max (parse-decimal-param (h/get-param params :total-amount-max))
+                  expense-context-id (h/try-parse-uuid (h/get-param params :expense_context_id))
+                  expense-context-missing? (or (true? (h/parse-boolean-param params :expense-context-missing))
+                                             (true? (h/parse-boolean-param params :missing-expense-context)))
                   source-filter (some-> (h/get-param params :source) str str/trim not-empty)
                   ;; Date highlight support
                   highlight-field-raw (h/get-param params :highlight-date-field)
@@ -54,6 +58,8 @@
                                        :created-at-to created-to
                                        :supplier-id (h/try-parse-uuid (h/get-param params :supplier_id))
                                        :payer-id (h/try-parse-uuid (h/get-param params :payer_id))
+                                       :expense-context-id expense-context-id
+                                       :expense-context-missing? expense-context-missing?
                                        :limit (or (some-> (h/get-param params :limit) parse-long) 50)
                                        :offset (or (some-> (h/get-param params :offset) parse-long) 0)}
                                  text-filters)
@@ -130,9 +136,12 @@
                   default-expense-category-id (when-not (or (:expense_category_id body)
                                                           (:expense-category-id body))
                                                 (user-settings/effective-default-expense-category-id db tenant-id user-id))
-                  expense-data (cond-> (select-keys body [:supplier_id :store_id :payer_id :expense_category_id :article_id :purchased_at :total_amount :currency :notes :receipt_id])
+                  expense-data (cond-> (select-keys body [:supplier_id :store_id :payer_id :expense_category_id :expense_context_id :article_id :purchased_at :total_amount :currency :notes :receipt_id])
                                  (:expense-category-id body)
                                  (assoc :expense_category_id (:expense-category-id body))
+
+                                 (:expense-context-id body)
+                                 (assoc :expense_context_id (:expense-context-id body))
 
                                  default-expense-category-id
                                  (assoc :expense_category_id default-expense-category-id))
@@ -166,7 +175,12 @@
           (if expense-id
             (try
               (let [body (h/read-body-params request)
-                    updates (select-keys body [:supplier_id :store_id :payer_id :expense_category_id :purchased_at :total_amount :currency :notes :items])]
+                    updates (cond-> (select-keys body [:supplier_id :store_id :payer_id :expense_category_id :expense_context_id :purchased_at :total_amount :currency :notes :items])
+                              (contains? body :expense-category-id)
+                              (assoc :expense_category_id (:expense-category-id body))
+
+                              (contains? body :expense-context-id)
+                              (assoc :expense_context_id (:expense-context-id body)))]
                 (if-let [expense (user-expenses/update-user-expense! db tenant-id user-id expense-id updates)]
                   (h/json-response {:data expense})
                   (h/not-found-response "Expense not found or access denied")))

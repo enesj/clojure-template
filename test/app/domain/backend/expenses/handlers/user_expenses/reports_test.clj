@@ -48,6 +48,7 @@
         supplier-id (UUID/randomUUID)
         payer-id (UUID/randomUUID)
         expense-category-id (UUID/randomUUID)
+        expense-context-id (UUID/randomUUID)
         from "2026-01-01"
         to "2026-01-31T23:59:59Z"
         handler (reports/day-of-week-spending-handler nil)]
@@ -66,7 +67,8 @@
                                                :currency "bam"
                                                :supplier_id (str supplier-id)
                                                :payer_id (str payer-id)
-                                               :expense_category_id (str expense-category-id)}}))
+                                               :expense_category_id (str expense-category-id)
+                                               :expense_context_id (str expense-context-id)}}))
             body (parse-body resp)
             row (first (:data body))]
         (testing "response shape"
@@ -82,7 +84,25 @@
           (is (= "BAM" (get-in @captured [:opts :currency])))
           (is (= supplier-id (get-in @captured [:opts :supplier-id])))
           (is (= payer-id (get-in @captured [:opts :payer-id])))
-          (is (= expense-category-id (get-in @captured [:opts :expense-category-id]))))))))
+          (is (= expense-category-id (get-in @captured [:opts :expense-category-id])))
+          (is (= expense-context-id (get-in @captured [:opts :expense-context-id]))))))))
+
+(deftest reports-parse-missing-expense-context-filter
+  (let [captured (atom nil)
+        user-id (UUID/randomUUID)
+        tenant-id (UUID/randomUUID)
+        handler (reports/expense-size-distribution-handler nil)]
+    (with-redefs [report-time/size-distribution
+                  (fn [_db passed-user-id opts]
+                    (reset! captured {:user-id passed-user-id :opts opts})
+                    [])]
+      (let [resp (handler (req {:user-id user-id
+                                :tenant-id tenant-id
+                                :role "member"
+                                :query-params {:expense-context-missing "true"}}))]
+        (is (= 200 (:status resp)))
+        (is (= user-id (:user-id @captured)))
+        (is (true? (get-in @captured [:opts :expense-context-missing?])))))))
 
 (deftest filter-options-handler-returns-expected-data
   (let [captured (atom nil)

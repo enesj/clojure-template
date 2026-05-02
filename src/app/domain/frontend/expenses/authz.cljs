@@ -31,6 +31,7 @@
    :expenses/manufacturers.manage 3
    :expenses/categories.manage 3
    :expenses/expense-categories.manage 3
+  :expenses/expense-contexts.manage 3
    :expenses/cities.manage 3
    :expenses/subcategories.manage 3
    :expenses/stores.manage 3

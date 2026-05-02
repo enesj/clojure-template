@@ -74,6 +74,7 @@
    {:value :expenses/manufacturers.manage :label "Expenses: manufacturers manage"}
    {:value :expenses/categories.manage :label "Expenses: categories manage"}
    {:value :expenses/expense-categories.manage :label "Expenses: expense categories manage"}
+  {:value :expenses/expense-contexts.manage :label "Expenses: expense contexts manage"}
    {:value :expenses/cities.manage :label "Expenses: cities manage"}
    {:value :expenses/subcategories.manage :label "Expenses: subcategories manage"}
    {:value :expenses/stores.manage :label "Expenses: stores manage"}

@@ -21,6 +21,7 @@
     :supplier (t :smart-expense/entity-supplier)
     :store    (t :smart-expense/entity-store)
     :category (t :smart-expense/entity-category)
+    :expense-context (t :smart-expense/entity-expense-context)
     :article  (t :smart-expense/entity-article)
     :payer    (t :smart-expense/entity-payer)
     :date     (t :smart-expense/entity-date)

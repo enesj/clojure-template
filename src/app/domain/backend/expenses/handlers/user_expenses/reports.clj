@@ -66,6 +66,9 @@
         supplier-id (parse-uuid-param params :supplier_id)
         payer-id (parse-uuid-param params :payer_id)
         expense-category-id (parse-uuid-param params :expense_category_id)
+        expense-context-id (parse-uuid-param params :expense_context_id)
+        expense-context-missing? (or (true? (h/parse-boolean-param params :expense-context-missing))
+                 (true? (h/parse-boolean-param params :missing-expense-context)))
         currency-raw (some-> (h/get-param params :currency) str str/trim str/upper-case)
         currency (when-not (str/blank? currency-raw) currency-raw)]
     (cond
@@ -74,6 +77,7 @@
       (= invalid supplier-id) {:error (h/json-response {:error "Invalid supplier_id"} 400)}
       (= invalid payer-id) {:error (h/json-response {:error "Invalid payer_id"} 400)}
       (= invalid expense-category-id) {:error (h/json-response {:error "Invalid expense_category_id"} 400)}
+      (= invalid expense-context-id) {:error (h/json-response {:error "Invalid expense_context_id"} 400)}
 
       :else
       {:opts (cond-> {}
@@ -82,6 +86,8 @@
                supplier-id (assoc :supplier-id supplier-id)
                payer-id (assoc :payer-id payer-id)
                expense-category-id (assoc :expense-category-id expense-category-id)
+               expense-context-id (assoc :expense-context-id expense-context-id)
+               expense-context-missing? (assoc :expense-context-missing? true)
                currency (assoc :currency currency))})))
 
 (defn- with-user-report-access

@@ -13,11 +13,11 @@
            quick-search-loading? cooccurring-pick-items focused-quick-pick-groups
            available-search-types items-total currency total-dropdown-count payer-name purchased-date
            set-payer-id! set-purchased-at! set-currency! handle-input-change handle-input-keydown
-           handle-select-result handle-create-inline handle-type-pick remove-context! update-item!
+           set-expense-context-id! handle-select-result handle-create-inline handle-type-pick remove-context! update-item!
            remove-item! focus-input! set-type-picker-text! focus-item-id set-focus-item-id!
            submitting? submit-disabled? begin-context-phase! on-cancel context-suggestions currency-options
            payers payer-id purchased-at context-initial-sub-stage suppliers phase-two-stores
-           expense-categories articles set-context-initial-sub-stage! set-phase!]}]
+           expense-categories expense-contexts articles set-context-initial-sub-stage! set-phase!]}]
   (if-not ready?
     ($ :div {:class "flex flex-col items-center justify-center p-16 gap-4"}
       ($ :span {:class "ds-loading ds-loading-spinner ds-loading-lg text-primary"})
@@ -127,6 +127,7 @@
            :suppliers suppliers
            :stores phase-two-stores
            :expense-categories expense-categories
+           :expense-contexts expense-contexts
            :articles articles
            :on-input-change handle-input-change
            :on-input-keydown handle-input-keydown
@@ -142,6 +143,7 @@
            :on-set-payer-id set-payer-id!
            :on-set-purchased-at set-purchased-at!
            :on-set-currency set-currency!
+           :on-set-expense-context-id set-expense-context-id!
            :on-cancel-type-picker #(set-type-picker-text! nil)}))
 
       (when (= phase :context)

@@ -68,10 +68,13 @@
     :else [:= column value]))
 
 (defn base-where
-  [user-id {:keys [tenant-id from to currency supplier-id payer-id expense-category-id]}]
+  [user-id {:keys [tenant-id from to currency supplier-id payer-id expense-category-id
+                   expense-context-id expense-context-missing?]}]
   (let [supplier-clause (id-filter-clause :e.supplier_id supplier-id)
         payer-clause (id-filter-clause :e.payer_id payer-id)
         expense-category-clause (id-filter-clause :e.expense_category_id expense-category-id)
+        expense-context-clause (when-not expense-context-missing?
+                                 (id-filter-clause :e.expense_context_id expense-context-id))
         ;; Drop expenses whose category is flagged `exclude_from_reports=true`.
         ;; NOT EXISTS is null-safe: expenses with no category still pass.
         exclude-flagged-category-clause
@@ -91,7 +94,9 @@
       (seq currency) (conj [:= :e.currency [:cast currency :currency]])
       supplier-clause (conj supplier-clause)
       payer-clause (conj payer-clause)
-      expense-category-clause (conj expense-category-clause))))
+      expense-category-clause (conj expense-category-clause)
+      (true? expense-context-missing?) (conj [:is :e.expense_context_id nil])
+      expense-context-clause (conj expense-context-clause))))
 
 (defn item-base-where
   [user-id {:keys [category-id subcategory-id manufacturer-id] :as opts}]

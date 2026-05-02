@@ -52,6 +52,7 @@
   {:months-back 6
    :supplier-id nil
    :expense-category-id nil
+    :expense-context-id nil
    :day-of-week nil
    :amount-bucket nil
    :selected-day nil})
@@ -74,13 +75,16 @@
   [db]
   (let [{:keys [months-back
                 supplier-id
-                expense-category-id]} (get-in db (conj reports-path :filters))
+                expense-category-id
+                expense-context-id]} (get-in db (conj reports-path :filters))
         range-params (report-range-params months-back)
         supplier-id* (normalize-id-filter supplier-id)
-        expense-category-id* (normalize-id-filter expense-category-id)]
+        expense-category-id* (normalize-id-filter expense-category-id)
+        expense-context-id* (normalize-id-filter expense-context-id)]
     (cond-> range-params
       supplier-id* (assoc :supplier_id supplier-id*)
-      expense-category-id* (assoc :expense_category_id expense-category-id*))))
+      expense-category-id* (assoc :expense_category_id expense-category-id*)
+      expense-context-id* (assoc :expense_context_id expense-context-id*))))
 
 (defn finish-failure-message
   [error]

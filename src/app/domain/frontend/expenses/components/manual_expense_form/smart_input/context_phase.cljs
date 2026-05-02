@@ -30,18 +30,19 @@
            payers payer-id purchased-at initial-sub-stage
            payer-name purchased-date
            on-clear-payer on-clear-date on-clear-currency
-           suppliers stores expense-categories articles
+            suppliers stores expense-categories expense-contexts articles
            ;; handlers
            on-input-change on-input-keydown on-select-result
            on-create-inline on-type-pick on-remove-context
            on-set-phase on-focus-input on-set-payer-id
-           on-set-purchased-at on-set-currency
+            on-set-purchased-at on-set-currency on-set-expense-context-id
            on-cancel-type-picker]}]
   (let [[sub-stage set-sub-stage!] (use-state
                                      (context-phase-initial-sub-stage
                                        context
                                        initial-sub-stage))
         selected-supplier-id (some-> context :supplier :id)
+          selected-expense-context-id (some-> context :expense-context :id str)
         defaults-missing-types (phase-two-missing-context-types context :defaults)
         defaults-quick-pick-groups (when (seq defaults-missing-types)
                                      (phase-two-quick-pick-groups defaults-missing-types
@@ -166,6 +167,22 @@
                           :on-change (fn [e] (on-set-currency (.. e -target -value)))}
                 (for [{:keys [value label]} currency-options]
                   ($ :option {:key value :value value} label)))))
+
+          ;; Optional Expense Context row
+          ($ :div {:class "grid grid-cols-1 gap-3"}
+            ($ :div
+              ($ :label {:class "text-sm text-base-content/50 mb-1 block"
+                         :for "smart-expense-context"}
+                (entity-type-label t :expense-context))
+              ($ :select {:id "smart-expense-context"
+                          :class (str "w-full text-base p-3 h-12 rounded-xl border-2 "
+                                   "border-base-300 bg-white focus:border-primary cursor-pointer")
+                          :value (or selected-expense-context-id "")
+                          :on-change (fn [e] (on-set-expense-context-id (.. e -target -value)))}
+                ($ :option {:value ""} (t :common/optional))
+                (for [expense-context expense-contexts]
+                  ($ :option {:key (:id expense-context) :value (:id expense-context)}
+                    (:name expense-context))))))
 
           ;; Optional: add store context before saving
           (when-not (:store context)
@@ -297,5 +314,21 @@
                           :value currency
                           :on-change (fn [e] (on-set-currency (.. e -target -value)))}
                 (for [{:keys [value label]} currency-options]
-                  ($ :option {:key value :value value} label)))))))))
+                  ($ :option {:key value :value value} label)))))
+
+          ;; Optional Expense Context row (compact in store-search)
+          ($ :div {:class "grid grid-cols-1 gap-3"}
+            ($ :div
+              ($ :label {:class "text-sm text-base-content/50 mb-1 block"
+                         :for "smart-expense-context-store"}
+                (entity-type-label t :expense-context))
+              ($ :select {:id "smart-expense-context-store"
+                          :class (str "w-full text-base p-3 h-12 rounded-xl border-2 "
+                                   "border-base-300 bg-white focus:border-primary cursor-pointer")
+                          :value (or selected-expense-context-id "")
+                          :on-change (fn [e] (on-set-expense-context-id (.. e -target -value)))}
+                ($ :option {:value ""} (t :common/optional))
+                (for [expense-context expense-contexts]
+                  ($ :option {:key (:id expense-context) :value (:id expense-context)}
+                    (:name expense-context))))))))))
 

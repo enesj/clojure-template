@@ -272,6 +272,13 @@
                                           :route :expense-categories-catalog
                                           :icon ($ suppliers-icon {:class "w-6 h-6"})
                                           :active? (active? #{:expense-categories-catalog})})
+                               (nav-item {:id "user-sidebar-expense-contexts"
+                                          :nav-id :expense-contexts
+                                          :label (t :nav/expense-contexts)
+                                          :href (th "/expense-contexts")
+                                          :route :expense-contexts
+                                          :icon ($ suppliers-icon {:class "w-6 h-6"})
+                                          :active? (active? #{:expense-contexts})})
                                (nav-item {:id "user-sidebar-stores"
                                           :nav-id :stores
                                           :label (t :nav/stores)

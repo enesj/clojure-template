@@ -286,6 +286,7 @@
                                          :supplier_id
                                          :payer_id
                                          :expense_category_id
+                                         :expense_context_id
                                          :subject_ref
                                          :created_by_subject_ref
                                          :receipt_id
@@ -387,7 +388,7 @@
                           (dissoc :items)
                           normalize-expense-data)
          amount-keys [:purchased_at :total_amount :currency]
-         base-keys [:store_id :supplier_id :payer_id :expense_category_id :purchased_at :total_amount :currency :notes]
+         base-keys [:store_id :supplier_id :payer_id :expense_category_id :expense_context_id :purchased_at :total_amount :currency :notes]
          where (if tenant-id
                  [:and [:= :id id*] [:= :tenant_id tenant-id]]
                  [:= :id id*])]

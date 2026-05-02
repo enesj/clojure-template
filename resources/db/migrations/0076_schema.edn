@@ -1,0 +1,176 @@
+({:action :create-table,
+  :model-name :expense_contexts,
+  :fields
+  {:id {:primary-key true, :type :uuid},
+   :tenant-id
+   {:foreign-key :tenants/id,
+    :null false,
+    :on-delete :cascade,
+    :type :uuid},
+   :name {:null false, :type [:varchar 255]},
+   :description {:type :text},
+   :is-active {:null false, :default true, :type :boolean},
+   :created-by-subject-ref {:type [:varchar 64]},
+   :created-at {:default [:now], :type :timestamptz},
+   :updated-at {:default [:now], :type :timestamptz}}}
+ {:action :create-type,
+  :type-name :expense-template-kind,
+  :model-name :expense_templates,
+  :options {:choices ["utility" "recurring" "generic"], :type :enum}}
+ {:action :create-type,
+  :type-name :recurrence-frequency,
+  :model-name :expense_templates,
+  :options
+  {:choices ["weekly" "monthly" "quarterly" "yearly" "custom"],
+   :type :enum}}
+ {:action :create-type,
+  :type-name :expense-template-status,
+  :model-name :expense_templates,
+  :options {:choices ["active" "archived"], :type :enum}}
+ {:action :create-table,
+  :model-name :expense_templates,
+  :fields
+  {:updated-at {:default [:now], :type :timestamptz},
+   :recurrence-interval {:default 1, :type :integer},
+   :default-expense-category-id
+   {:foreign-key :expense_categories/id,
+    :on-delete :set-null,
+    :type :uuid},
+   :reminder-days-before {:null false, :default 0, :type :integer},
+   :default-expense-context-id
+   {:foreign-key :expense_contexts/id,
+    :on-delete :set-null,
+    :type :uuid},
+   :name {:null false, :type [:varchar 255]},
+   :default-currency
+   {:null false, :default "BAM", :type [:enum :currency]},
+   :recurrence-frequency {:type [:enum :recurrence-frequency]},
+   :next-due-date {:type :date},
+   :default-supplier-id
+   {:foreign-key :suppliers/id, :on-delete :set-null, :type :uuid},
+   :created-by-subject-ref {:type [:varchar 64]},
+   :status
+   {:null false,
+    :default "active",
+    :type [:enum :expense-template-status]},
+   :id {:primary-key true, :type :uuid},
+   :default-payer-id
+   {:foreign-key :payers/id, :on-delete :set-null, :type :uuid},
+   :kind
+   {:null false,
+    :default "generic",
+    :type [:enum :expense-template-kind]},
+   :default-notes {:type :text},
+   :created-at {:default [:now], :type :timestamptz},
+   :tenant-id
+   {:foreign-key :tenants/id,
+    :null false,
+    :on-delete :cascade,
+    :type :uuid}}}
+ {:action :create-index,
+  :index-name :idx-expense-templates-tenant-status,
+  :model-name :expense_templates,
+  :options {:fields [:tenant_id :status], :type :btree}}
+ {:action :create-index,
+  :index-name :idx-expense-contexts-tenant-active,
+  :model-name :expense_contexts,
+  :options {:fields [:tenant_id :is_active], :type :btree}}
+ {:action :create-index,
+  :index-name :idx-expense-contexts-tenant-name,
+  :model-name :expense_contexts,
+  :options {:fields [:tenant_id :name], :unique true, :type :btree}}
+ {:action :add-column,
+  :field-name :expense-context-id,
+  :model-name :expenses,
+  :options
+  {:foreign-key :expense_contexts/id,
+   :on-delete :set-null,
+   :type :uuid}}
+ {:action :create-index,
+  :index-name :idx-expense-templates-tenant-name,
+  :model-name :expense_templates,
+  :options {:fields [:tenant_id :name], :type :btree}}
+ {:action :create-table,
+  :model-name :expense_template_lines,
+  :fields
+  {:updated-at {:default [:now], :type :timestamptz},
+   :default-amount {:type [:decimal 12 2]},
+   :sort-order {:null false, :default 0, :type :integer},
+   :article-id
+   {:foreign-key :articles/id, :on-delete :set-null, :type :uuid},
+   :is-active {:null false, :default true, :type :boolean},
+   :label {:null false, :type [:varchar 255]},
+   :id {:primary-key true, :type :uuid},
+   :created-at {:default [:now], :type :timestamptz},
+   :template-id
+   {:foreign-key :expense_templates/id,
+    :null false,
+    :on-delete :cascade,
+    :type :uuid}}}
+ {:action :create-index,
+  :index-name :idx-expense-template-lines-article,
+  :model-name :expense_template_lines,
+  :options {:fields [:article_id], :type :btree}}
+ {:action :create-index,
+  :index-name :idx-expenses-expense-context,
+  :model-name :expenses,
+  :options {:fields [:expense_context_id], :type :btree}}
+ {:action :create-type,
+  :type-name :recurring-expense-reminder-status,
+  :model-name :recurring_expense_reminders,
+  :options
+  {:choices ["pending" "recorded" "skipped" "snoozed"], :type :enum}}
+ {:action :create-index,
+  :index-name :idx-expense-templates-tenant-kind,
+  :model-name :expense_templates,
+  :options {:fields [:tenant_id :kind], :type :btree}}
+ {:action :create-table,
+  :model-name :recurring_expense_reminders,
+  :fields
+  {:updated-at {:default [:now], :type :timestamptz},
+   :skipped-at {:type :timestamptz},
+   :status
+   {:null false,
+    :default "pending",
+    :type [:enum :recurring-expense-reminder-status]},
+   :snoozed-until {:type :timestamptz},
+   :id {:primary-key true, :type :uuid},
+   :due-date {:null false, :type :date},
+   :recorded-expense-id
+   {:foreign-key :expenses/id, :on-delete :set-null, :type :uuid},
+   :created-at {:default [:now], :type :timestamptz},
+   :reminded-at {:default [:now], :type :timestamptz},
+   :template-id
+   {:foreign-key :expense_templates/id,
+    :null false,
+    :on-delete :cascade,
+    :type :uuid}}}
+ {:action :create-index,
+  :index-name :uniq-recurring-expense-reminders-template-due,
+  :model-name :recurring_expense_reminders,
+  :options
+  {:fields [:template_id :due_date], :unique true, :type :btree}}
+ {:action :create-index,
+  :index-name :idx-expense-template-lines-template-order,
+  :model-name :expense_template_lines,
+  :options {:fields [:template_id :sort_order], :type :btree}}
+ {:action :create-index,
+  :index-name :idx-expense-contexts-tenant,
+  :model-name :expense_contexts,
+  :options {:fields [:tenant_id], :type :btree}}
+ {:action :create-index,
+  :index-name :idx-expense-templates-due,
+  :model-name :expense_templates,
+  :options {:fields [:tenant_id :status :next_due_date], :type :btree}}
+ {:action :create-index,
+  :index-name :idx-recurring-expense-reminders-template-status,
+  :model-name :recurring_expense_reminders,
+  :options {:fields [:template_id :status], :type :btree}}
+ {:action :create-index,
+  :index-name :idx-recurring-expense-reminders-recorded-expense,
+  :model-name :recurring_expense_reminders,
+  :options {:fields [:recorded_expense_id], :type :btree}}
+ {:action :create-index,
+  :index-name :idx-recurring-expense-reminders-snoozed-until,
+  :model-name :recurring_expense_reminders,
+  :options {:fields [:snoozed_until], :type :btree}})

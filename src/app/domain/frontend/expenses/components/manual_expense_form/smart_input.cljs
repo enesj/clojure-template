@@ -50,6 +50,7 @@
         suppliers (or (use-subscribe [:user-expenses/suppliers]) [])
         stores (or (use-subscribe [:user-expenses/stores]) [])
         expense-categories (or (use-subscribe [:user-expenses/expense-categories]) [])
+        expense-contexts (or (use-subscribe [:user-expenses/expense-contexts]) [])
         articles (or (use-subscribe [:user-expenses/articles]) [])
         payers (or (use-subscribe [:user-expenses/payers]) [])
         payers-loading? (boolean (use-subscribe [:user-expenses/payers-loading?]))
@@ -292,6 +293,18 @@
                                     c* (if (= entity-type :supplier) (dissoc c* :store) c*)]
                                 c*))))
 
+        set-expense-context-id! (fn [context-id]
+                                  (let [context-id* (some-> context-id str str/trim not-empty)]
+                                    (set-context!
+                                      (fn [c]
+                                        (if context-id*
+                                          (if-let [expense-context (some #(when (= context-id* (some-> (:id %) str)) %)
+                                                                    expense-contexts)]
+                                            (assoc c :expense-context {:id (:id expense-context)
+                                                                       :label (or (:name expense-context) "")})
+                                            c)
+                                          (dissoc c :expense-context))))))
+
         begin-context-phase! (fn [requested-sub-stage]
                                (let [article-ids (->> items (keep :article-id) vec)]
                                  (set-input-text! "")
@@ -460,6 +473,7 @@
         (rf/dispatch [:user-expenses/fetch-articles {:limit 200 :offset 0}])
         (rf/dispatch [:user-expenses/fetch-payers {:limit 100 :offset 0}])
         (rf/dispatch [:user-expenses/fetch-expense-categories {:limit 500 :offset 0}])
+        (rf/dispatch [:user-expenses/fetch-expense-contexts {:limit 500 :offset 0}])
         ;; Cleanup quick add search only when the form truly unmounts.
         (fn []
           (rf/dispatch [:user-expenses/clear-quick-add-search :all])
@@ -597,6 +611,7 @@
        :set-payer-id! set-payer-id!
        :set-purchased-at! set-purchased-at!
        :set-currency! set-currency!
+      :set-expense-context-id! set-expense-context-id!
        :handle-input-change handle-input-change
        :handle-input-keydown handle-input-keydown
        :handle-select-result handle-select-result
@@ -622,6 +637,7 @@
        :suppliers suppliers
        :phase-two-stores phase-two-stores
        :expense-categories expense-categories
+      :expense-contexts expense-contexts
        :articles articles
        :set-context-initial-sub-stage! set-context-initial-sub-stage!
        :set-phase! set-phase!})))

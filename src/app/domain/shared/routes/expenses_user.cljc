@@ -19,6 +19,7 @@
    {:id :user-profile :path "/profile" :spa-fallback? true}
    {:id :expense-suppliers :path "/suppliers" :spa-fallback? true}
    {:id :expense-payers :path "/payers" :spa-fallback? true}
+  {:id :expense-contexts :path "/expense-contexts" :spa-fallback? true}
    {:id :expense-stores :path "/stores" :spa-fallback? true}
    {:id :expense-store-aliases :path "/store-aliases" :spa-fallback? true}
    {:id :expense-items :path "/expense-items" :spa-fallback? true}

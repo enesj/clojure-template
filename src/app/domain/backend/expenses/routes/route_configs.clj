@@ -49,6 +49,59 @@
    :has-search? true
    :filter-params [:search]})
 
+(def expense-context-config
+  {:entity-key :expense-context
+   :entity-plural :expense-contexts
+   :route-segment "expense-contexts"
+   :service 'app.domain.backend.expenses.services.expense-contexts
+   :default-limit 100
+   :default-order-by "name"
+   :required-fields [:name]
+   :has-search? true
+   :filter-params {:search :string
+                   :is-active :boolean}})
+
+(def expense-template-config
+  {:entity-key :expense-template
+   :entity-plural :expense-templates
+   :route-segment "expense-templates"
+   :service 'app.domain.backend.expenses.services.expense-templates
+   :default-limit 100
+   :default-order-by "name"
+   :required-fields [:name :kind]
+   :has-search? true
+   :filter-params {:search :string
+                   :kind :string
+                   :status :string
+                   :expense-context-id :uuid
+                   :expense-category-id :uuid}})
+
+(def expense-template-line-config
+  {:entity-key :expense-template-line
+   :entity-plural :expense-template-lines
+   :route-segment "expense-template-lines"
+   :service 'app.domain.backend.expenses.services.expense-template-lines
+   :default-limit 100
+   :default-order-by "sort_order"
+   :required-fields [:template-id :label]
+   :has-search? true
+   :filter-params {:search :string
+                   :template-id :uuid
+                   :article-id :uuid
+                   :is-active :boolean}})
+
+(def recurring-expense-reminder-config
+  {:entity-key :recurring-expense-reminder
+   :entity-plural :recurring-expense-reminders
+   :route-segment "recurring-expense-reminders"
+   :service 'app.domain.backend.expenses.services.recurring-expense-reminders
+   :default-limit 100
+   :default-order-by "due_date"
+   :required-fields [:template-id :due-date]
+   :has-search? false
+   :filter-params {:status :string
+                   :template-id :uuid}})
+
 (def subcategory-config
   {:entity-key :subcategory
    :entity-plural :subcategories
@@ -170,6 +223,7 @@
                    :to :string
                    :supplier-id :uuid
                    :payer-id :uuid
+                   :expense-context-id :uuid
                    :source :string}
    :transform-response {:transform privacy/admin-expenses-view}})
 

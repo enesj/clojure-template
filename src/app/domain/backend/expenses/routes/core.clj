@@ -9,12 +9,16 @@
     [app.domain.backend.expenses.routes.countries :as countries]
     [app.domain.backend.expenses.routes.duplicates :as duplicates]
     [app.domain.backend.expenses.routes.expense-categories :as expense-categories]
+    [app.domain.backend.expenses.routes.expense-contexts :as expense-contexts]
     [app.domain.backend.expenses.routes.expense-items :as expense-items]
+    [app.domain.backend.expenses.routes.expense-template-lines :as expense-template-lines]
+    [app.domain.backend.expenses.routes.expense-templates :as expense-templates]
     [app.domain.backend.expenses.routes.expenses :as expenses]
     [app.domain.backend.expenses.routes.global-settings :as global-settings]
     [app.domain.backend.expenses.routes.manufacturers :as manufacturers]
     [app.domain.backend.expenses.routes.payers :as payers]
     [app.domain.backend.expenses.routes.receipts :as receipts]
+    [app.domain.backend.expenses.routes.recurring-expense-reminders :as recurring-expense-reminders]
     [app.domain.backend.expenses.routes.reports :as reports]
     [app.domain.backend.expenses.routes.store-aliases :as store-aliases]
     [app.domain.backend.expenses.routes.stores :as stores]
@@ -38,6 +42,10 @@
      (manufacturers/routes db)
      (categories/routes db)
      (expense-categories/routes db)
+    (expense-contexts/routes db)
+    (expense-templates/routes db)
+    (expense-template-lines/routes db)
+    (recurring-expense-reminders/routes db)
      (subcategories/routes db)
      (payers/routes db)
      (receipts/routes db app-config)

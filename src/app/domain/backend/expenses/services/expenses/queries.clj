@@ -18,6 +18,7 @@
    :supplier-display-name :s.display_name
    :payer-label :p.label
    :expense-category-name :ec.name
+  :expense-context-name :ctx.name
    :item-count :item_count})
 
 (defn- normalize-sort-entry
@@ -52,11 +53,13 @@
                                          [:s.normalized_key :supplier_normalized_key]
                                          [:p.label :payer_label]
                                          [:p.type :payer_type]
-                                         [:ec.name :expense_category_name]]
+                                          [:ec.name :expense_category_name]
+                                          [:ctx.name :expense_context_name]]
                                 :from [[:expenses :e]]
                                 :left-join [[:suppliers :s] [:= :s.id :e.supplier_id]
                                             [:payers :p] [:= :p.id :e.payer_id]
-                                            [:expense_categories :ec] [:= :ec.id :e.expense_category_id]]
+                                            [:expense_categories :ec] [:= :ec.id :e.expense_category_id]
+                                            [:expense_contexts :ctx] [:= :ctx.id :e.expense_context_id]]
                                 :where where})
                    {:builder-fn rs/as-unqualified-lower-maps})
          items (when expense
@@ -76,7 +79,7 @@
        (assoc expense :items items)))))
 
 (defn list-expenses
-  [db {:keys [from to supplier-id payer-id tenant-id source limit offset sorts order-by order-dir]
+  [db {:keys [from to supplier-id payer-id expense-context-id tenant-id source limit offset sorts order-by order-dir]
        :or {limit 50 offset 0 order-dir :desc}}]
   (let [from (try (parsing/parse-instant! :from from) (catch Exception _ nil))
         to (try (parsing/parse-instant! :to to) (catch Exception _ nil))
@@ -95,12 +98,14 @@
                      to (conj [:<= :e.purchased_at to])
                      supplier-id (conj [:= :e.supplier_id supplier-id])
                      payer-id (conj [:= :e.payer_id payer-id])
+                     expense-context-id (conj [:= :e.expense_context_id expense-context-id])
                      source-where (conj source-where))
         query {:select [[:e.*]
                         [:s.display_name :supplier_display_name]
                         [:s.normalized_key :supplier_normalized_key]
                         [:p.label :payer_label]
                         [:p.type :payer_type]
+                        [:ctx.name :expense_context_name]
                         [{:select [[[:count :*] :n]]
                           :from [[:expense_items :ei]]
                           :where [:and
@@ -111,7 +116,8 @@
                :from [[:expenses :e]]
                :left-join [[:suppliers :s] [:= :s.id :e.supplier_id]
                            [:payers :p] [:= :p.id :e.payer_id]
-                           [:expense_categories :ec] [:= :ec.id :e.expense_category_id]]
+                           [:expense_categories :ec] [:= :ec.id :e.expense_category_id]
+                           [:expense_contexts :ctx] [:= :ctx.id :e.expense_context_id]]
                :where base-where
                :order-by order-clauses
                :limit limit
@@ -119,7 +125,7 @@
     (jdbc/execute! db (sql/format query) {:builder-fn rs/as-unqualified-lower-maps})))
 
 (defn count-expenses
-  [db {:keys [from to supplier-id payer-id tenant-id source]}]
+  [db {:keys [from to supplier-id payer-id expense-context-id tenant-id source]}]
   (let [from (try (parsing/parse-instant! :from from) (catch Exception _ nil))
         to (try (parsing/parse-instant! :to to) (catch Exception _ nil))
         source-where (source-clause :receipt_id source)
@@ -129,6 +135,7 @@
                      to (conj [:<= :purchased_at to])
                      supplier-id (conj [:= :supplier_id supplier-id])
                      payer-id (conj [:= :payer_id payer-id])
+                     expense-context-id (conj [:= :expense_context_id expense-context-id])
                      source-where (conj source-where))
         row (jdbc/execute-one!
               db

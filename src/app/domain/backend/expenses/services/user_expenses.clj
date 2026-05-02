@@ -156,6 +156,7 @@
   #{:supplier_id
     :payer_id
     :expense_category_id
+    :expense_context_id
     :purchased_at
     :total_amount
     :currency
@@ -182,7 +183,7 @@
   - any updatable expense columns using snake_case or kebab-case keys
 
   Only the following fields are applied after normalization:
-  :supplier_id :payer_id :expense_category_id :purchased_at :total_amount :currency :notes :receipt_id
+  :supplier_id :payer_id :expense_category_id :expense_context_id :purchased_at :total_amount :currency :notes :receipt_id
 
   `tenant-id` scopes the ownership checks and updates to a specific tenant.
 
@@ -245,11 +246,13 @@
                                         [:s.normalized_key :supplier_normalized_key]
                                         [:p.label :payer_label]
                                         [:p.type :payer_type]
-                                        [:ec.name :expense_category_name]]
+                                         [:ec.name :expense_category_name]
+                                         [:ctx.name :expense_context_name]]
                                :from [[:expenses :e]]
                                :left-join [[:suppliers :s] [:= :s.id :e.supplier_id]
                                            [:payers :p] [:= :p.id :e.payer_id]
-                                           [:expense_categories :ec] [:= :ec.id :e.expense_category_id]]
+                                           [:expense_categories :ec] [:= :ec.id :e.expense_category_id]
+                                           [:expense_contexts :ctx] [:= :ctx.id :e.expense_context_id]]
                                :where where})
                   {:builder-fn rs/as-unqualified-lower-maps})
         items (when expense
@@ -273,6 +276,7 @@
   {:supplier-display-name  :s.display_name
    :store-display-name     :st.display_name
    :expense-category-name  :ec.name
+    :expense-context-name   :ctx.name
    :payer-label            :p.label
    :notes                  :e.notes})
 
@@ -291,6 +295,7 @@
    :payer-label :p.label
    :payer-type :pt.label
   :expense-category-name :ec.name
+  :expense-context-name :ctx.name
   :item-count :item_count})
 
 (defn- parse-decimal-param
@@ -340,6 +345,13 @@
       (= 1 (count currency-values)) (conj where [:= column (first currency-values)])
       :else (conj where [:in column currency-values]))))
 
+(defn- apply-expense-context-filter
+  [where column expense-context-id expense-context-missing?]
+  (cond
+    (true? expense-context-missing?) (conj where [:is column nil])
+    expense-context-id (conj where [:= column expense-context-id])
+    :else where))
+
 (defn list-user-expenses
   "List expenses for a specific user with common filters.
 
@@ -356,9 +368,11 @@
 
   `tenant-id` scopes the query to a specific tenant."
   [db tenant-id user-id {:keys [from to created-at-from created-at-to
-                                supplier-id payer-id
+                                supplier-id payer-id expense-context-id
+                                expense-context-missing?
                                 supplier-display-name store-display-name
-                                expense-category-name payer-label currency notes
+                                expense-category-name expense-context-name
+                                payer-label currency notes
                                 total-amount-min total-amount-max source
                                 limit offset sorts order-by order-dir]
                          :or {limit 50 offset 0 order-dir :desc}}]
@@ -396,6 +410,11 @@
                      (some? total-amount-min) (conj [:>= :e.total_amount total-amount-min])
                      (some? total-amount-max) (conj [:<= :e.total_amount total-amount-max])
                      source-where (conj source-where))
+                  base-where (apply-expense-context-filter
+                         base-where
+                         :e.expense_context_id
+                         expense-context-id
+                         expense-context-missing?)
         filtered-base-where (apply-currency-filter base-where :e.currency currency-values)
         query (-> {:select [[:e.*]
                             [:s.display_name :supplier_display_name]
@@ -404,6 +423,7 @@
                             [:p.label :payer_label]
                             [:p.type :payer_type]
                             [:ec.name :expense_category_name]
+                            [:ctx.name :expense_context_name]
                             [{:select [[[:count :ei.id]]]
                               :from [[:expense_items :ei]]
                               :where [:= :ei.expense_id :e.id]} :item_count]]
@@ -411,7 +431,8 @@
                    :left-join [[:suppliers :s] [:= :s.id :e.supplier_id]
                                [:stores :st] [:= :st.id :e.store_id]
                                [:payers :p] [:= :p.id :e.payer_id]
-                               [:expense_categories :ec] [:= :ec.id :e.expense_category_id]]
+                               [:expense_categories :ec] [:= :ec.id :e.expense_category_id]
+                               [:expense_contexts :ctx] [:= :ctx.id :e.expense_context_id]]
                    :where filtered-base-where
                    :order-by order-clauses
                    :limit limit
@@ -420,6 +441,7 @@
                   {:supplier-display-name supplier-display-name
                    :store-display-name store-display-name
                    :expense-category-name expense-category-name
+                   :expense-context-name expense-context-name
                    :payer-label payer-label
                    :notes notes}))]
     (jdbc/execute! db (sql/format query) {:builder-fn rs/as-unqualified-lower-maps})))
@@ -430,9 +452,11 @@
    `tenant-id` scopes the count to a specific tenant.
    Text filters (supplier-display-name, etc.) require LEFT JOINs."
   [db tenant-id user-id {:keys [from to created-at-from created-at-to
-                                supplier-id payer-id
+                                supplier-id payer-id expense-context-id
+                                expense-context-missing?
                                 supplier-display-name store-display-name
-                                expense-category-name payer-label currency notes
+                                expense-category-name expense-context-name
+                                payer-label currency notes
                                 total-amount-min total-amount-max source]}]
   (let [user-id (ensure-uuid user-id)
         tenant-id (ensure-uuid tenant-id)
@@ -446,6 +470,7 @@
         text-filters {:supplier-display-name supplier-display-name
                       :store-display-name store-display-name
                       :expense-category-name expense-category-name
+                      :expense-context-name expense-context-name
                       :payer-label payer-label
                       :notes notes}
         has-text-filters? (shared-qb/has-text-filters?
@@ -469,6 +494,11 @@
                      (some? total-amount-min) (conj [:>= (if has-text-filters? :e.total_amount :total_amount) total-amount-min])
                      (some? total-amount-max) (conj [:<= (if has-text-filters? :e.total_amount :total_amount) total-amount-max])
                      source-where (conj source-where))
+                  base-where (apply-expense-context-filter
+                         base-where
+                         (if has-text-filters? :e.expense_context_id :expense_context_id)
+                         expense-context-id
+                         expense-context-missing?)
         filtered-base-where (apply-currency-filter base-where (if has-text-filters? :e.currency :currency) currency-values)
         query (if has-text-filters?
                 (-> {:select [[[:count :*] :total]]
@@ -476,7 +506,8 @@
                      :left-join [[:suppliers :s] [:= :s.id :e.supplier_id]
                                  [:stores :st] [:= :st.id :e.store_id]
                                  [:payers :p] [:= :p.id :e.payer_id]
-                                 [:expense_categories :ec] [:= :ec.id :e.expense_category_id]]
+                                 [:expense_categories :ec] [:= :ec.id :e.expense_category_id]
+                                 [:expense_contexts :ctx] [:= :ctx.id :e.expense_context_id]]
                      :where filtered-base-where}
                   (shared-qb/apply-text-filters expense-text-filter-columns text-filters))
                 {:select [[[:count :*] :total]]
@@ -504,9 +535,11 @@
   "Return distinct local-date strings for a given timestamp column while
    respecting the same non-highlight filters as list/count."
   [db tenant-id user-id {:keys [from to created-at-from created-at-to
-                                supplier-id payer-id
+                                supplier-id payer-id expense-context-id
+                                expense-context-missing?
                                 supplier-display-name store-display-name
-                                expense-category-name payer-label currency notes
+                                expense-category-name expense-context-name
+                                payer-label currency notes
                                 total-amount-min total-amount-max
                                 highlight-column highlight-timezone
                                 highlight-field]}]
@@ -526,6 +559,7 @@
             created-at-to (when-not exclude-created? (parse-instant-param created-at-to))
             total-amount-min (parse-decimal-param total-amount-min)
             total-amount-max (parse-decimal-param total-amount-max)
+            expense-context-id (some-> expense-context-id ensure-uuid)
             currency-values (normalize-currency-filter currency)
             day-expr (str "to_char(timezone('"
                        (clojure.string/replace tz-id "'" "''")
@@ -541,13 +575,19 @@
                          payer-id (conj [:= :e.payer_id (ensure-uuid payer-id)])
                          (some? total-amount-min) (conj [:>= :e.total_amount total-amount-min])
                          (some? total-amount-max) (conj [:<= :e.total_amount total-amount-max]))
+            base-where (apply-expense-context-filter
+                         base-where
+                         :e.expense_context_id
+                         expense-context-id
+                         expense-context-missing?)
             base-where (apply-currency-filter base-where :e.currency currency-values)
             query (-> {:select [[[:raw day-expr] :day]]
                        :from [[:expenses :e]]
                        :left-join [[:suppliers :s] [:= :s.id :e.supplier_id]
                                    [:stores :st] [:= :st.id :e.store_id]
                                    [:payers :p] [:= :p.id :e.payer_id]
-                                   [:expense_categories :ec] [:= :ec.id :e.expense_category_id]]
+                                   [:expense_categories :ec] [:= :ec.id :e.expense_category_id]
+                                   [:expense_contexts :ctx] [:= :ctx.id :e.expense_context_id]]
                        :where base-where
                        :group-by [[:raw day-expr]]
                        :order-by [[[:raw day-expr] :asc]]}
@@ -555,6 +595,7 @@
                       {:supplier-display-name supplier-display-name
                        :store-display-name store-display-name
                        :expense-category-name expense-category-name
+                       :expense-context-name expense-context-name
                        :payer-label payer-label
                        :notes notes}))]
         (->> (jdbc/execute! db (sql/format query)
@@ -571,7 +612,8 @@
    When user-id is nil, aggregates all tenant expenses.
    Returns: {:total-expenses N :total-amount M :currency-totals {...} :recent-count N}
    `tenant-id` scopes the summary to a specific tenant."
-  [db tenant-id user-id {:keys [days-back from to supplier-id expense-category-id]
+  [db tenant-id user-id {:keys [days-back from to supplier-id expense-category-id
+                                expense-context-id expense-context-missing?]
                          :or {days-back 30}}]
   (let [user-id (ensure-uuid user-id)
         tenant-id (ensure-uuid tenant-id)
@@ -579,7 +621,9 @@
         to* (parse-instant-param to)
         supplier-id* (some-> supplier-id ensure-uuid)
         expense-category-id* (some-> expense-category-id ensure-uuid)
-        report-summary? (or from* to* supplier-id* expense-category-id*)]
+        expense-context-id* (some-> expense-context-id ensure-uuid)
+        report-summary? (or from* to* supplier-id* expense-category-id*
+                           expense-context-id* expense-context-missing?)]
     (if report-summary?
       (let [summary-where (cond-> [:and]
                             user-id (conj (user-ownership-clause :subject_ref user-id))
@@ -588,6 +632,11 @@
                             to* (conj [:<= :purchased_at to*])
                             supplier-id* (conj [:= :supplier_id supplier-id*])
                             expense-category-id* (conj [:= :expense_category_id expense-category-id*]))
+            summary-where (apply-expense-context-filter
+                            summary-where
+                            :expense_context_id
+                            expense-context-id*
+                            expense-context-missing?)
             total-expenses (:total (jdbc/execute-one!
                                      db
                                      (sql/format {:select [[[:count :*] :total]]
@@ -611,6 +660,11 @@
             currency-where (cond-> [:and]
                              user-id (conj (user-ownership-clause :subject_ref user-id))
                              tenant-id (conj [:= :tenant_id tenant-id]))
+            currency-where (apply-expense-context-filter
+                             currency-where
+                             :expense_context_id
+                             nil
+                             false)
             currency-totals (jdbc/execute!
                               db
                               (sql/format {:select [:currency
@@ -631,14 +685,17 @@
   "Get monthly spending aggregation for a user.
    Returns list of {:month \"YYYY-MM\" :currency C :total N}
    `tenant-id` scopes the query to a specific tenant."
-  [db tenant-id user-id {:keys [months-back] :or {months-back 6}}]
+  [db tenant-id user-id {:keys [months-back expense-context-id expense-context-missing?]
+                         :or {months-back 6}}]
   (let [user-id (ensure-uuid user-id)
         tenant-id (ensure-uuid tenant-id)
+        expense-context-id (some-> expense-context-id ensure-uuid)
         where (cond-> [:and
                        [:>= :purchased_at
                         [:raw (format "NOW() - INTERVAL '%d months'" months-back)]]]
                 user-id (conj (user-ownership-clause :subject_ref user-id))
-                tenant-id (conj [:= :tenant_id tenant-id]))]
+          tenant-id (conj [:= :tenant_id tenant-id]))
+        where (apply-expense-context-filter where :expense_context_id expense-context-id expense-context-missing?)]
     (jdbc/execute!
       db
       (sql/format {:select [[[:to_char :purchased_at [:inline "YYYY-MM"]] :month]
@@ -654,9 +711,11 @@
   "Get spending by supplier for a user.
    Returns list of {:supplier_id UUID :supplier_name S :total N :currency C}
    `tenant-id` scopes the query to a specific tenant."
-  [db tenant-id user-id {:keys [from to limit] :or {limit 10}}]
+  [db tenant-id user-id {:keys [from to limit expense-context-id expense-context-missing?]
+                         :or {limit 10}}]
   (let [user-id (ensure-uuid user-id)
         tenant-id (ensure-uuid tenant-id)
+        expense-context-id (some-> expense-context-id ensure-uuid)
         from (parse-instant-param from)
         to (parse-instant-param to)
         base-where (cond-> [:and
@@ -664,7 +723,8 @@
                      user-id (conj (user-ownership-clause :e.subject_ref user-id))
                      tenant-id (conj [:= :e.tenant_id tenant-id])
                      from (conj [:>= :e.purchased_at from])
-                     to (conj [:<= :e.purchased_at to]))]
+                     to (conj [:<= :e.purchased_at to]))
+        base-where (apply-expense-context-filter base-where :e.expense_context_id expense-context-id expense-context-missing?)]
     (jdbc/execute!
       db
       (sql/format {:select [:e.supplier_id

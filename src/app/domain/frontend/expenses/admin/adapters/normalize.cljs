@@ -169,6 +169,16 @@
      :alias-keys {:created_at [:created-at]
                   :updated_at [:updated-at]}}))
 
+(defn expense-context->template-entity
+  [expense-context]
+  (entity-utils/normalize-entity
+    expense-context
+    {:entity-ns :expense-contexts
+     :id-keys [:id]
+     :alias-keys {:is_active [:is-active]
+                  :created_at [:created-at]
+                  :updated_at [:updated-at]}}))
+
 (defn city->template-entity
   [city]
   (entity-utils/normalize-entity

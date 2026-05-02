@@ -95,6 +95,7 @@
     :expenses/manufacturers.manage
     :expenses/categories.manage
     :expenses/expense-categories.manage
+    :expenses/expense-contexts.manage
     :expenses/cities.manage
     :expenses/subcategories.manage
     :expenses/stores.manage

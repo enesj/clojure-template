@@ -52,6 +52,16 @@
   (fn [db _]
     (get-in db [:user-expenses :expense-categories :loading?])))
 
+(rf/reg-sub
+  :user-expenses/expense-contexts
+  (fn [db _]
+    (get-in db [:user-expenses :expense-contexts :items])))
+
+(rf/reg-sub
+  :user-expenses/expense-contexts-loading?
+  (fn [db _]
+    (get-in db [:user-expenses :expense-contexts :loading?])))
+
 ;; Supplier detail (used by the user suppliers modal)
 (rf/reg-sub
   :user-expenses/supplier-detail

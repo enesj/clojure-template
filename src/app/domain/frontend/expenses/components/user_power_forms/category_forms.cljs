@@ -134,6 +134,70 @@
                                     on-success]))
          :button-text "Save Expense Category"}))))
 
+(def ^:private expense-context-form-spec
+  [{:id :name
+    :type :text
+    :label "Name"
+    :required true
+    :placeholder "e.g. Home, Rental Apartment, Utilities"}
+   {:id :description
+    :type :textarea
+    :label "Description"
+    :required false
+    :placeholder "Optional"}
+   {:id :is-active
+    :type :checkbox
+    :label "Active"
+    :required false}])
+
+(defui user-expense-context-add-form-modal
+  [{:keys [on-success on-cancel]}]
+  (let [form-error (use-subscribe [:user-expenses/form-error])]
+    ($ :div {:class "space-y-4"}
+      (when form-error
+        ($ :div {:class "ds-alert ds-alert-error"}
+          ($ :span form-error)))
+
+      ($ form
+        {:entity-name "expense-contexts"
+         :entity-spec expense-context-form-spec
+         :editing false
+         :initial-values {:is-active true}
+         :on-cancel on-cancel
+         :on-submit (fn [{:keys [values]}]
+                      (rf/dispatch [:user-expenses/create-expense-context-modal values on-success]))
+         :button-text "Save Expense Context"}))))
+
+(defui user-expense-context-edit-form-modal
+  [{:keys [item on-success on-cancel]}]
+  (let [form-error (use-subscribe [:user-expenses/form-error])
+        item (normalization/convert-db-keys->app-keys item)
+        context-id (id-utils/extract-entity-id item)
+        initial-values (-> {}
+                         (assoc :name (or (:name item) ""))
+                         (assoc :description (or (:description item) ""))
+                         (assoc :is-active (if (contains? item :is-active)
+                                             (boolean (:is-active item))
+                                             true))
+                         (assoc :id (or (:id item) "")))]
+    ($ :div {:class "space-y-4"}
+      (when form-error
+        ($ :div {:class "ds-alert ds-alert-error"}
+          ($ :span form-error)))
+
+      ($ form
+        {:entity-name "expense-contexts"
+         :entity-spec expense-context-form-spec
+         :editing true
+         :initial-values initial-values
+         :on-cancel on-cancel
+         :on-submit (fn [{:keys [values]}]
+                      (rf/dispatch [:user-expenses/update-expense-context-modal
+                                    (some-> context-id str)
+                                    values
+                                    on-success]))
+         :button-text "Save Expense Context"}))))
+
 (def ^:private subcategory-form-spec
   [{:id :category_id
     :type :select

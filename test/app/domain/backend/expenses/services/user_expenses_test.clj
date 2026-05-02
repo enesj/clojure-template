@@ -70,6 +70,38 @@
       (let [sql-str (first @captured-sql)]
         (is (re-find #"(?i)order\s+by\s+item_count\s+desc" sql-str))))))
 
+(deftest list-user-expenses-supports-expense-context-filtering
+  (let [captured-sql (atom nil)
+        expense-context-id (UUID/randomUUID)]
+    (with-redefs [jdbc/execute! (fn [_db sql _opts]
+                                  (reset! captured-sql sql)
+                                  [])]
+      (user-expenses/list-user-expenses :db nil (UUID/randomUUID)
+        {:limit 10
+         :offset 0
+         :expense-context-id expense-context-id
+         :order-by :expense-context-name
+         :order-dir :asc})
+      (let [sql @captured-sql
+            sql-str (first sql)]
+        (is (re-find #"(?i)expense_context_name" sql-str))
+        (is (re-find #"(?i)join\s+expense_contexts\s+(?:as\s+)?ctx\s+on\s+ctx\.id\s*=\s*e\.expense_context_id" sql-str))
+        (is (re-find #"(?i)e\.expense_context_id\s*=\s*\?" sql-str))
+        (is (some #(= expense-context-id %) (rest sql)))
+        (is (re-find #"(?i)order\s+by\s+ctx\.name\s+asc" sql-str))))))
+
+(deftest list-user-expenses-supports-missing-expense-context-filter
+  (let [captured-sql (atom nil)]
+    (with-redefs [jdbc/execute! (fn [_db sql _opts]
+                                  (reset! captured-sql sql)
+                                  [])]
+      (user-expenses/list-user-expenses :db nil (UUID/randomUUID)
+        {:limit 10
+         :offset 0
+         :expense-context-missing? true})
+      (let [sql-str (first @captured-sql)]
+        (is (re-find #"(?i)e\.expense_context_id\s+is\s+null" sql-str))))))
+
 (deftest user-expenses-support-currency-and-total-amount-filters
   (let [list-sql (atom nil)
         count-sql (atom nil)
@@ -123,7 +155,8 @@
         tenant-id (UUID/randomUUID)
         user-id (UUID/randomUUID)
         supplier-id (UUID/randomUUID)
-        expense-category-id (UUID/randomUUID)]
+        expense-category-id (UUID/randomUUID)
+        expense-context-id (UUID/randomUUID)]
     (with-redefs [jdbc/execute-one! (fn [_db sql _opts]
                                       (reset! captured-count-sql sql)
                                       {:total 7})
@@ -137,7 +170,8 @@
                       {:from "2026-03-01T00:00:00Z"
                        :to "2026-03-31T23:59:59Z"
                        :supplier-id supplier-id
-                       :expense-category-id expense-category-id})
+                       :expense-category-id expense-category-id
+                       :expense-context-id expense-context-id})
             count-sql-str (first @captured-count-sql)
             total-sql-str (first @captured-total-sql)]
         (is (= 7 (:total-expenses summary)))
@@ -147,6 +181,7 @@
         (is (re-find #"(?i)purchased_at\s*<=|purchased_at\s*<=" count-sql-str))
         (is (re-find #"(?i)supplier_id" count-sql-str))
         (is (re-find #"(?i)expense_category_id" count-sql-str))
+        (is (re-find #"(?i)expense_context_id" count-sql-str))
         (is (re-find #"(?i)group\s+by\s+currency" total-sql-str))))))
 
 (deftest normalize-batch-update-updates-supports-app-and-db-keys
@@ -154,11 +189,13 @@
         supplier-id (str (UUID/randomUUID))
         payer-id (str (UUID/randomUUID))
         expense-category-id (str (UUID/randomUUID))
+        expense-context-id (str (UUID/randomUUID))
         purchased-at "2026-04-22T10:50:01.700Z"]
     (testing "kebab-case payload keys are normalized to DB keys"
       (is (= {:supplier_id supplier-id
               :payer_id payer-id
               :expense_category_id expense-category-id
+              :expense_context_id expense-context-id
               :purchased_at purchased-at
               :total_amount 42.5M
               :currency "EUR"
@@ -168,6 +205,7 @@
               :supplier-id supplier-id
               :payer-id payer-id
               :expense-category-id expense-category-id
+              :expense-context-id expense-context-id
               :purchased-at purchased-at
               :total-amount 42.5M
               :currency "EUR"
