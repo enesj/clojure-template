@@ -8,6 +8,8 @@
 
 (defn routes [db]
   (let [config (-> configs/subcategory-config
+                 (assoc :custom-query-params (fn [_]
+                                               {:extra-filters [[:is :sc.tenant_id nil]]}))
                  (factory/register-entity-routes!))
         base-routes (factory/build-extended-routes db config)]
     (into base-routes

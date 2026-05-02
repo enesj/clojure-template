@@ -11,12 +11,35 @@
     [app.domain.backend.expenses.handlers.user-expenses.helpers :as h]
     [app.domain.backend.expenses.services.article-aliases :as aliases]
     [app.domain.backend.expenses.services.articles :as articles]
+    [app.domain.backend.expenses.services.subcategories :as subcategories]
     [clojure.string :as str]
     [taoensso.timbre :as log]))
 
 ;; -----------------------------------------------------------------------------
 ;; Handlers
 ;; -----------------------------------------------------------------------------
+
+(defn- ensure-selectable-subcategory!
+  [db tenant-id subcategory-id]
+  (when subcategory-id
+    (let [subcategory (subcategories/tenant-managed-subcategory-record db subcategory-id)]
+      (cond
+        (nil? subcategory)
+        (throw (ex-info "Subcategory not found" {:status 404 :subcategory-id subcategory-id}))
+
+        (and (:tenant_id subcategory)
+          (not= tenant-id (:tenant_id subcategory)))
+        (throw (ex-info "Subcategory is not available in this tenant"
+                 {:status 403
+                  :tenant-id tenant-id
+                  :subcategory-id subcategory-id}))
+
+        (false? (:is_active subcategory))
+        (throw (ex-info "Disabled subcategories are not selectable for new edits"
+                 {:status 400
+                  :subcategory-id subcategory-id}))
+
+        :else subcategory))))
 
 (defn- parse-instant-param
   [raw]
@@ -113,6 +136,7 @@
             (h/json-response {:error "Invalid article id"} 400)
             (try
               (let [body (h/read-body-params request)
+                  tenant-id (h/get-tenant-id request)
                     canonical-provided? (contains? body :canonical_name)
                     unit-provided? (or (contains? body :unit)
                                      (contains? body :item_unit)
@@ -159,6 +183,9 @@
                   (throw (ex-info "Invalid subcategory id" {:status 400
                                                             :subcategory-id subcategory-id-raw
                                                             :article-id article-id})))
+
+                (when subcategory-id-provided?
+                  (ensure-selectable-subcategory! db tenant-id subcategory-id))
 
                 (let [updates (cond-> {}
                                 canonical-provided?

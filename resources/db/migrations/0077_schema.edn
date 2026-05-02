@@ -1,0 +1,40 @@
+({:action :add-column,
+  :field-name :is-system-default,
+  :model-name :subcategories,
+  :options {:null false, :default true, :type :boolean}}
+ {:action :add-column,
+  :field-name :tenant-id,
+  :model-name :subcategories,
+  :options
+  {:foreign-key :tenants/id, :on-delete :cascade, :type :uuid}}
+ {:action :create-index,
+  :index-name :idx-subcategories-tenant-id,
+  :model-name :subcategories,
+  :options {:fields [:tenant_id], :type :btree}}
+ {:action :create-index,
+  :index-name :uniq-subcategories-tenant-category-name,
+  :model-name :subcategories,
+  :options
+  {:fields [:tenant_id :category_id :name],
+   :unique true,
+   :where [:raw "(tenant_id IS NOT NULL)"],
+   :type :btree}}
+ {:action :add-column,
+  :field-name :created-by-subject-ref,
+  :model-name :subcategories,
+  :options {:type [:varchar 64]}}
+ {:action :create-index,
+  :index-name :uniq-subcategories-global-category-name,
+  :model-name :subcategories,
+  :options
+  {:fields [:category_id :name],
+   :unique true,
+   :where [:raw "(tenant_id IS NULL)"],
+   :type :btree}}
+ {:action :drop-index,
+  :index-name :idx-subcategories-category-name,
+  :model-name :subcategories}
+ {:action :add-column,
+  :field-name :is-active,
+  :model-name :subcategories,
+  :options {:null false, :default true, :type :boolean}})

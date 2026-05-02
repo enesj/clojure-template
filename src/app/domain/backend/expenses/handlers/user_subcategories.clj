@@ -58,9 +58,15 @@
                 sort-opts (h/parse-sort-params qp)
                 category-name (h/get-param qp :category-name)
                 description (h/get-param qp :description)
+                tenant-id (h/get-tenant-id request)
+                managed-only? (h/parse-boolean-param qp :managed-taxonomy-only)
+                include-disabled? (h/parse-boolean-param qp :include-disabled)
                 created-at-from (h/parse-instant-param (h/get-param qp :created-at-from))
                 created-at-to (h/parse-instant-param (h/get-param qp :created-at-to))
-                extra-filters (cond-> []
+                extra-filters (cond-> (subcategories/tenant-list-filters
+                                         tenant-id
+                                         {:managed-only? managed-only?
+                                          :include-disabled? include-disabled?})
                                 created-at-from (conj [:>= :sc.created_at created-at-from])
                                 created-at-to (conj [:<= :sc.created_at created-at-to]))
                 opts (cond-> {:limit limit
@@ -92,6 +98,8 @@
         forbidden
         (try
           (let [body (h/read-body-params request)
+                tenant-id (h/get-tenant-id request)
+                user-id (h/get-user-id request)
                 category-id (parse-category-id body)
                 name (:name body)
                 description-provided? (or (contains? body :description)
@@ -106,10 +114,14 @@
             (when-not category-id
               (throw (ex-info "Invalid category id" {:status 400})))
 
-            (let [payload (cond-> {:category_id category-id
-                                   :name name}
-                            description-provided? (assoc :description description))
-                  subcategory (h/to-app ((:create! subcategories/service) db payload))]
+            (let [subcategory (h/to-app
+                                (subcategories/create-tenant-subcategory!
+                                  db
+                                  (cond-> {:tenant-id tenant-id
+                                           :category-id category-id
+                                           :name name
+                                           :created-by-subject-ref (some-> user-id str)}
+                                    description-provided? (assoc :description description))))]
               (h/json-response {:data subcategory} 201)))
           (catch clojure.lang.ExceptionInfo e
             (log/warn "Validation error creating subcategory" {:error (ex-message e) :data (ex-data e)})
@@ -130,6 +142,7 @@
             (h/json-response {:error "Invalid subcategory id"} 400)
             (try
               (let [body (h/read-body-params request)
+                  tenant-id (h/get-tenant-id request)
                     category-id-provided?* (category-id-provided? body)
                     category-id (parse-category-id body)
                     name-provided? (contains? body :name)
@@ -155,7 +168,8 @@
                                 category-id-provided?* (assoc :category_id category-id)
                                 name-provided? (assoc :name name)
                                 description-provided? (assoc :description description))
-                      updated (some-> ((:update! subcategories/service) db subcategory-id updates)
+                      updated (some-> (subcategories/update-tenant-subcategory!
+                                        db tenant-id subcategory-id updates)
                                 h/to-app)]
                   (if updated
                     (h/json-response {:data updated})
@@ -195,8 +209,13 @@
               (h/json-response {:error "One or more subcategory ids are invalid"} 400)
 
               :else
-              (let [delete! (:delete! subcategories/service)]
-                (h/json-response {:data (h/batch-delete-entities #(delete! db %) ids)}))))
+              (let [tenant-id (h/get-tenant-id request)]
+                (h/json-response {:data (h/batch-delete-entities
+                                           #(subcategories/disable-tenant-subcategory! db tenant-id %)
+                                           ids)}))))
+          (catch clojure.lang.ExceptionInfo e
+            (log/warn "Validation error disabling subcategories" {:error (ex-message e) :data (ex-data e)})
+            (h/json-response {:error (ex-message e)} (or (:status (ex-data e)) 400)))
           (catch Exception e
             (log/error e "Failed to batch delete subcategories" {:message (.getMessage e)})
             (h/json-response {:error "Failed to delete subcategories"} 500)))))))

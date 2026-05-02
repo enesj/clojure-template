@@ -76,19 +76,23 @@
    :updated_at {:label-key :common/updated-at}}},
  :subcategories
  {:available-columns
-  ["category_name" "name" "description" "created_at" "category_id" "updated_at" "id"],
+  ["category_name" "name" "description" "is_active" "is_system_default" "created_at" "category_id" "updated_at" "id"],
   :default-visible-columns
-  ["name" "category_name" "description" "created_at"],
+  ["name" "category_name" "description" "is_active" "created_at"],
   :filterable-columns
-  ["name" "category_name" "description" "created_at"],
-  :sortable-columns ["name" "category_name" "created_at" "updated_at"],
+  ["name" "category_name" "description" "is_active" "created_at"],
+  :sortable-columns ["name" "category_name" "is_active" "is_system_default" "created_at" "updated_at"],
   :always-visible ["name"],
   :computed-fields
   {:category_name {:type "string", :label "Category"}},
-  :column-config {:category_id {:type "text"}},
+  :column-config {:category_id {:type "text"},
+                  :is_active {:type "boolean"},
+                  :is_system_default {:type "boolean"}},
   :column-metadata
   {:category_name {:label-key :common/category},
    :category_id {:label-key :common/category-id},
+   :is_active {:label "Active"},
+   :is_system_default {:label "System default"},
    :name {:label-key :common/subcategory-name},
    :description {:label-key :common/description},
    :created_at {:label-key :common/created-at},

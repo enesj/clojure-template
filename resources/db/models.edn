@@ -105,15 +105,27 @@
    [:category_id
     :uuid
     {:foreign-key :categories/id, :null false, :on-delete :cascade}]
+   [:tenant_id :uuid {:foreign-key :tenants/id, :on-delete :cascade}]
    [:name [:varchar 255] {:null false}]
    [:description :text]
+   [:is_active :boolean {:null false, :default true}]
+   [:is_system_default :boolean {:null false, :default true}]
+   [:created_by_subject_ref [:varchar 64]]
    [:created_at :timestamptz {:default [:now]}]
    [:updated_at :timestamptz {:default [:now]}]],
   :indexes
   [[:idx_subcategories_category_id :btree {:fields [:category_id]}]
-   [:idx_subcategories_category_name
+   [:idx_subcategories_tenant_id :btree {:fields [:tenant_id]}]
+   [:uniq_subcategories_global_category_name
     :btree
-    {:fields [:category_id :name], :unique true}]]},
+    {:fields [:category_id :name],
+     :unique true,
+     :where [:raw "(tenant_id IS NULL)"]}]
+   [:uniq_subcategories_tenant_category_name
+    :btree
+    {:fields [:tenant_id :category_id :name],
+     :unique true,
+     :where [:raw "(tenant_id IS NOT NULL)"]}]]},
  :cities
  {:fields
   [[:id :uuid {:primary-key true}]

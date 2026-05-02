@@ -2,72 +2,14 @@
   "Power-user categories list (used for subcategories and articles)."
   (:require
     [app.domain.frontend.expenses.components.page-guard :refer [expenses-page-guard]]
-    [app.domain.frontend.expenses.components.user-power-forms :refer [user-category-add-form-modal
-                                                                      user-category-edit-form-modal]]
     [app.template.frontend.components.button :refer [button]]
-    [app.template.frontend.components.confirm-dialog :as confirm-dialog]
-    [app.template.frontend.components.icons :refer [delete-icon edit-icon]]
     [app.template.frontend.components.list :refer [list-view]]
     [app.template.frontend.events.list.ui-state :as list-ui-state-events]
     [app.template.frontend.i18n :refer [use-t]]
-    [app.template.frontend.utils.id :as id-utils]
     [re-frame.core :as rf]
     [uix.core :refer [$ defui use-callback use-effect]]
     [uix.re-frame :refer [use-subscribe]]
     app.domain.frontend.expenses.subs.user-expenses))
-
-(defn- render-add-form
-  [{:keys [on-success on-cancel]}]
-  ($ user-category-add-form-modal
-    {:on-success on-success
-     :on-cancel on-cancel}))
-
-(defn- render-edit-form
-  [item {:keys [on-success on-cancel]}]
-  ($ user-category-edit-form-modal
-    {:item item
-     :on-success on-success
-     :on-cancel on-cancel}))
-
-(defn- render-actions
-  [t item]
-  (let [category-id (id-utils/extract-entity-id item)
-        category-id-str (some-> category-id str)
-        on-edit-click (:on-edit-click item)
-        show-edit? (not (false? (:show-edit? item)))
-        show-delete? (not (false? (:show-delete? item)))
-        edit-disabled? (true? (:edit-disabled? item))
-        delete-disabled? (true? (:delete-disabled? item))
-        item-data (dissoc item :show-edit? :show-delete? :edit-disabled? :delete-disabled? :on-edit-click)]
-    ($ :div {:class "flex items-center justify-center gap-2"}
-      (when show-edit?
-        ($ button
-          {:id (str "btn-edit-categories-" category-id-str)
-           :btn-type :primary
-           :shape "circle"
-           :disabled edit-disabled?
-           :on-click (fn [e]
-                       (.stopPropagation e)
-                       (when-not edit-disabled?
-                         (when on-edit-click
-                           (on-edit-click item-data))))}
-          ($ edit-icon)))
-
-      (when show-delete?
-        ($ button
-          {:id (str "btn-delete-categories-" category-id-str)
-           :btn-type :danger
-           :shape "circle"
-           :disabled delete-disabled?
-           :on-click (fn [e]
-                       (.stopPropagation e)
-                       (when-not delete-disabled?
-                         (confirm-dialog/show-confirm
-                           {:title (t :categories/delete-title)
-                            :message (t :categories/delete-msg)
-                            :on-confirm #(rf/dispatch [:user-expenses/delete-category category-id-str])
-                            :on-cancel nil})))}
-          ($ delete-icon))))))
 
 (defui categories-page
   []
@@ -107,8 +49,4 @@
            ($ list-view
              {:entity-name entity-name
               :entity-spec entity-spec
-              :render-add-form render-add-form
-              :render-edit-form render-edit-form
-              :on-add-success refresh-list
-              :on-edit-success refresh-list
-              :render-actions (fn [item] (render-actions t item))})))})))
+              :render-actions (fn [_item] nil)})))})))

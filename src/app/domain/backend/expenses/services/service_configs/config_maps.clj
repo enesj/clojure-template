@@ -436,20 +436,31 @@
     not-empty
     normalize/normalize-store-key))
 
+(defn- subcategory-visibility-scope-filter
+  [category-id tenant-id]
+  (if tenant-id
+    [:and
+     [:= :category_id category-id]
+     [:or
+      [:= :tenant_id tenant-id]
+      [:is :tenant_id nil]]]
+    [:and
+     [:= :category_id category-id]
+     [:is :tenant_id nil]]))
+
 (defn- find-equivalent-subcategory
-  [db category-id name exclude-id]
+  [db category-id tenant-id name exclude-id]
   (when (and category-id (seq (str (or name ""))))
     (let [normalized-name (normalize-subcategory-name-key name)]
       (when normalized-name
         (->> (jdbc/execute!
                db
                (sql/format
-                 (cond-> {:select [:id :name]
+                 (cond-> {:select [:id :name :tenant_id]
                           :from [:subcategories]
-                          :where [:= :category_id category-id]}
-                   exclude-id (assoc :where [:and
-                                             [:= :category_id category-id]
-                                             [:<> :id exclude-id]])))
+                          :where (subcategory-visibility-scope-filter category-id tenant-id)}
+                   exclude-id (update :where (fn [where]
+                                               [:and where [:<> :id exclude-id]]))))
                {:builder-fn rs/as-unqualified-lower-maps})
           (some (fn [{existing-name :name :as row}]
                   (when (= normalized-name
@@ -457,12 +468,13 @@
                     row))))))))
 
 (defn- assert-unique-subcategory-name!
-  [db category-id name exclude-id]
-  (when-let [existing (find-equivalent-subcategory db category-id name exclude-id)]
+  [db category-id tenant-id name exclude-id]
+  (when-let [existing (find-equivalent-subcategory db category-id tenant-id name exclude-id)]
     (throw (ex-info "subcategory with equivalent name already exists in this category"
              {:status 400
               :field :name
               :category-id category-id
+              :tenant-id tenant-id
               :conflicting-id (:id existing)
               :conflicting-name (:name existing)}))))
 
@@ -473,6 +485,8 @@
    :required-fields [:category_id :name]
    :allowed-order-by {:name :sc/name
                       :category-name :c/name
+                      :is-active :sc/is_active
+                      :is-system-default :sc/is_system_default
                       :created-at :sc/created_at
                       :updated-at :sc/updated_at}
    :default-order-by :sc/name
@@ -484,27 +498,33 @@
                    [:c/name :category_name]]
    :before-insert (fn [db data]
                     (let [category-id (:category_id data)
+                          tenant-id (:tenant_id data)
                           name (some-> (:name data) normalize/unescape-html-entities str str/trim not-empty)]
                       (when-not category-id
                         (throw (ex-info "category_id is required" {:status 400 :field :category_id :data data})))
                       (when-not name
                         (throw (ex-info "name is required" {:status 400 :field :name :data data})))
-                      (assert-unique-subcategory-name! db category-id name nil)
+                      (assert-unique-subcategory-name! db category-id tenant-id name nil)
                       (-> data
                         (assoc :id (UUID/randomUUID))
-                        (assoc :name name))))
+                        (assoc :name name)
+                        (assoc :is_active (if (contains? data :is_active)
+                                            (boolean (:is_active data))
+                                            true))
+                        (assoc :is_system_default (nil? tenant-id)))))
    :before-update (fn [db id updates]
                     (if (or (contains? updates :name)
                           (contains? updates :category_id))
                       (let [current (jdbc/execute-one!
                                       db
-                                      (sql/format {:select [:id :category_id :name]
+                                      (sql/format {:select [:id :category_id :tenant_id :name]
                                                    :from [:subcategories]
                                                    :where [:= :id id]})
                                       {:builder-fn rs/as-unqualified-lower-maps})
                             category-id (if (contains? updates :category_id)
                                           (:category_id updates)
                                           (:category_id current))
+                            tenant-id (:tenant_id current)
                             name (if (contains? updates :name)
                                    (some-> (:name updates) normalize/unescape-html-entities str str/trim)
                                    (:name current))]
@@ -512,7 +532,7 @@
                           (throw (ex-info "category_id is required" {:status 400 :field :category_id :id id})))
                         (when (str/blank? name)
                           (throw (ex-info "name is required" {:status 400 :field :name :id id})))
-                        (assert-unique-subcategory-name! db category-id name id)
+                        (assert-unique-subcategory-name! db category-id tenant-id name id)
                         (cond-> updates
                           (contains? updates :name) (assoc :name name)))
                       updates))

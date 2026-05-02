@@ -34,10 +34,16 @@
   (let [subcategory-id (id-utils/extract-entity-id item)
         subcategory-id-str (some-> subcategory-id str)
         on-edit-click (:on-edit-click item)
+        system-default? (or (true? (:is-system-default item))
+              (true? (:is_system_default item)))
+        active-value (if (contains? item :is-active)
+                 (:is-active item)
+                 (:is_active item))
+        active? (not (false? active-value))
         show-edit? (not (false? (:show-edit? item)))
         show-delete? (not (false? (:show-delete? item)))
-        edit-disabled? (true? (:edit-disabled? item))
-        delete-disabled? (true? (:delete-disabled? item))
+        edit-disabled? (or system-default? (true? (:edit-disabled? item)))
+        delete-disabled? (or system-default? (not active?) (true? (:delete-disabled? item)))
         item-data (dissoc item :show-edit? :show-delete? :edit-disabled? :delete-disabled? :on-edit-click)]
     ($ :div {:class "flex items-center justify-center gap-2"}
       (when show-edit?
@@ -76,9 +82,11 @@
         entity-spec (use-subscribe [:entity-specs/by-name entity-name])
         refresh-list (use-callback
                        (fn []
-                         ;; Ensure categories are available for FK selects
-                         (rf/dispatch [:user-expenses/fetch-categories])
-                         (rf/dispatch [:user-expenses/refresh-subcategories-list]))
+                         ;; Ensure only tenant-manageable categories are available for FK selects.
+                         (rf/dispatch [:user-expenses/fetch-categories {:managed-taxonomy-only true}])
+                         (rf/dispatch [:user-expenses/refresh-subcategories-list
+                                       {:managed-taxonomy-only true
+                                        :include-disabled true}]))
                        [])]
     (use-effect
       (fn []

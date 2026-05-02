@@ -316,7 +316,15 @@
                         db
                         (sql/format {:select [:id :name]
                                      :from [:subcategories]
-                                     :where [:= :category_id category-id]
+                                     :where (if tenant-id
+                                              [:and
+                                               [:= :category_id category-id]
+                                               [:or
+                                                [:is :tenant_id nil]
+                                                [:= :tenant_id tenant-id]]]
+                                              [:and
+                                               [:= :category_id category-id]
+                                               [:is :tenant_id nil]])
                                      :order-by [[:name :asc]]})
                         {:builder-fn rs/as-unqualified-lower-maps})
 

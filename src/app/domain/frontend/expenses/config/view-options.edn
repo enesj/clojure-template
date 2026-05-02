@@ -9,9 +9,9 @@
  :subcategories
  {:display-locks {},
   :display-defaults
-  {:show-add-button? true,
-   :show-delete? true,
-   :show-edit? true,
+  {:show-add-button? false,
+   :show-delete? false,
+   :show-edit? false,
    :show-filtering? true,
    :show-highlights? true,
    :show-pagination? true,

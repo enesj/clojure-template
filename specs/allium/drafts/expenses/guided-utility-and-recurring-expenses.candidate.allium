@@ -27,8 +27,8 @@
 --   - Expense gains an optional expense_context reference for reusable reporting/filtering.
 --   - Manual entry surfaces can create expenses from guided drafts as normal Expense + ExpenseItem records.
 --   - Expense list/report filters gain an optional ExpenseContext filter.
---   - Article taxonomy should contain a Utilities category with utility subcategories such as Electricity,
---     Water, Gas, and Heating.
+--   - Article taxonomy contains fixed Utilities and Subscriptions categories.
+--   - Tenant owners can add/disable tenant-only subcategories under Utilities and Subscriptions only.
 --
 -- Vocabulary decisions:
 --   - Domain name: Recurring expense.
@@ -85,7 +85,12 @@ external entity Category {
 external entity Subcategory {
     id: UUID
     category: Category
+    tenant: Tenant?
     name: String
+    description: String?
+    is_active: Boolean
+    is_system_default: Boolean
+    created_by: User?
 }
 
 external entity Article {
@@ -286,6 +291,7 @@ config {
     utility_expense_category_name: String = "Utilities"
     subscription_category_name: String = "Subscriptions"
     subscription_recurring_label: String = "Subscriptions & recurring"
+    tenant_managed_article_category_names: Set<String> = {"Utilities", "Subscriptions"}
     default_utility_context_required: Boolean = true
     utility_subcategory_names: Set<String> = {"Electricity", "Water", "Gas", "Heating"}
     recurring_reminder_horizon_days: Integer = 30
@@ -302,6 +308,11 @@ actor ExpenseWriter {
 }
 
 actor ExpenseContextManager {
+    identified_by: User where membership_role in {admin, owner}
+    within: Tenant
+}
+
+actor TenantArticleTaxonomyManager {
     identified_by: User where membership_role in {admin, owner}
     within: Tenant
 }
@@ -357,6 +368,74 @@ rule ArchiveExpenseContext {
     @guidance
         -- Archiving a context hides it from new-entry dropdowns but preserves historical expenses.
         -- Existing expenses keep their expense_context reference for reports.
+}
+
+
+-- ═════════════════════════════════════════════
+-- TENANT ARTICLE SUBCATEGORY MANAGEMENT
+-- ═════════════════════════════════════════════
+
+rule CreateTenantManagedSubcategory {
+    when: UserCreatesTenantManagedSubcategory(actor, tenant, category, name, description?)
+
+    requires: actor.tenant_id = tenant.id
+    requires: actor.membership_role in {admin, owner}
+    requires: category.name in config.tenant_managed_article_category_names
+    requires: name.trim().length >= 1
+    requires: not exists Subcategory where category = category
+        and (tenant = tenant or tenant = null)
+        and name = name.trim()
+
+    ensures: Subcategory.created(
+        category: category,
+        tenant: tenant,
+        name: name.trim(),
+        description: description,
+        is_active: true,
+        is_system_default: false,
+        created_by: actor
+    )
+
+    @guidance
+        -- Tenant-created subcategories are workspace-local article taxonomy choices.
+        -- They are not global catalog additions and must not be visible to other tenants
+        -- or to global-admin catalog pages outside the owning tenant context.
+}
+
+rule RenameTenantManagedSubcategory {
+    when: UserRenamesTenantManagedSubcategory(actor, subcategory, name, description?)
+
+    requires: subcategory.tenant.id = actor.tenant_id
+    requires: actor.membership_role in {admin, owner}
+    requires: subcategory.category.name in config.tenant_managed_article_category_names
+    requires: not subcategory.is_system_default
+    requires: name.trim().length >= 1
+    requires: not exists Subcategory where category = subcategory.category
+        and (tenant = subcategory.tenant or tenant = null)
+        and name = name.trim()
+        and id != subcategory.id
+
+    ensures:
+        subcategory.name = name.trim()
+        subcategory.description = description
+}
+
+rule DisableTenantManagedSubcategory {
+    when: UserDisablesTenantManagedSubcategory(actor, subcategory)
+
+    requires: subcategory.tenant.id = actor.tenant_id
+    requires: actor.membership_role in {admin, owner}
+    requires: subcategory.category.name in config.tenant_managed_article_category_names
+    requires: not subcategory.is_system_default
+    requires: subcategory.is_active
+
+    ensures:
+        subcategory.is_active = false
+
+    @guidance
+        -- Deleting a tenant-managed subcategory is implemented as disable/archive.
+        -- Disabled subcategories remain readable on existing articles, expense lines,
+        -- reports, and historical records, but are hidden from new/edit pickers.
 }
 
 
@@ -647,6 +726,16 @@ invariant RecurringTemplatesHaveSchedule {
         template.kind = recurring implies template.recurrence_frequency != null and template.next_due_date != null
 }
 
+invariant TenantManagedSubcategoriesAreLimitedToUtilitiesAndSubscriptions {
+    for subcategory in Subcategories:
+        subcategory.tenant != null implies subcategory.category.name in config.tenant_managed_article_category_names
+}
+
+invariant TenantManagedSubcategoriesDoNotCrossTenantBoundaries {
+    for subcategory in Subcategories:
+        subcategory.tenant != null implies not subcategory.is_system_default
+}
+
 
 -- ═════════════════════════════════════════════
 -- SURFACES
@@ -678,6 +767,56 @@ surface ExpenseContextAdmin {
         -- when historical expenses reference them.
 }
 
+surface TenantArticleTaxonomyAdmin {
+    facing manager: TenantArticleTaxonomyManager
+    context tenant: Tenant
+
+    exposes:
+        for category in Category where category.name in config.tenant_managed_article_category_names:
+            category.name
+        for subcategory in Subcategory where subcategory.category.name in config.tenant_managed_article_category_names
+            and (subcategory.tenant = tenant or subcategory.tenant = null):
+            subcategory.category.name
+            subcategory.name
+            subcategory.description
+            subcategory.is_active
+            subcategory.is_system_default
+
+    provides:
+        UserCreatesTenantManagedSubcategory(manager, tenant, category: Category, name: String, description: String?)
+            when category.name in config.tenant_managed_article_category_names
+        UserRenamesTenantManagedSubcategory(manager, subcategory: Subcategory, name: String, description: String?)
+            when subcategory.tenant = tenant
+                and subcategory.category.name in config.tenant_managed_article_category_names
+                and not subcategory.is_system_default
+        UserDisablesTenantManagedSubcategory(manager, subcategory: Subcategory)
+            when subcategory.tenant = tenant
+                and subcategory.category.name in config.tenant_managed_article_category_names
+                and not subcategory.is_system_default
+                and subcategory.is_active
+
+    @guarantee CategoriesAreFixed
+        -- Tenant users cannot add, rename, disable, or delete article categories.
+        -- The tenant-management surface exposes only the fixed Utilities and Subscriptions categories.
+
+    @guarantee OnlyUtilitiesAndSubscriptionsSubcategoriesAreManaged
+        -- Tenant users cannot manage subcategories under Groceries, Maintenance,
+        -- or any category other than Utilities and Subscriptions.
+
+    @guarantee TenantSubcategoriesArePrivate
+        -- A subcategory created by one tenant is visible only to users of that tenant.
+        -- It is not available to other tenants and is not shown in global-admin catalog pages
+        -- outside the owning tenant context.
+
+    @guarantee DisabledSubcategoriesAreHistoricalOnly
+        -- Disabled tenant-managed subcategories remain visible where existing records reference them,
+        -- but are not selectable in new expense, edit expense, article, or template pickers.
+
+    @guarantee ExpenseContextIsNotTenant
+        -- Expense contexts such as Sarajevo Apartments and Holiday House do not affect taxonomy visibility.
+        -- They are reporting/filtering dimensions inside the tenant, not tenant boundaries.
+}
+
 surface UtilityExpenseEntry {
     facing writer: ExpenseWriter
     context draft: GuidedExpenseDraft where workflow_kind = utility
@@ -694,7 +833,9 @@ surface UtilityExpenseEntry {
         draft.computed_total
         for context in ExpenseContext where tenant = draft.tenant and is_active:
             context.name
-        for subcategory in Subcategory where subcategory.category.name = "Utilities":
+        for subcategory in Subcategory where subcategory.category.name = "Utilities"
+            and (subcategory.tenant = draft.tenant or subcategory.tenant = null)
+            and subcategory.is_active:
             subcategory.name
 
     provides:
@@ -845,6 +986,24 @@ surface ExpenseListAndReportsContextFilter {
         -- Archived contexts are still available for filtering when matching historical expenses exist.
 }
 
+surface ArticleClassificationPicker {
+    facing writer: ExpenseWriter
+    context tenant: Tenant
+
+    exposes:
+        for subcategory in Subcategory where (subcategory.tenant = tenant or subcategory.tenant = null)
+            and subcategory.is_active:
+            subcategory.category.name
+            subcategory.name
+
+    @guarantee PickersExcludeDisabledTenantSubcategories
+        -- New/edit pickers show active global defaults plus active tenant-owned subcategories.
+        -- Disabled tenant-owned subcategories are omitted even though historical reads still resolve them.
+
+    @guarantee TenantScopeIsWorkspaceScope
+        -- Picker visibility is scoped by tenant/workspace, not by ExpenseContext.
+}
+
 
 -- ═════════════════════════════════════════════
 -- DEFERRED
@@ -872,6 +1031,10 @@ deferred Recurrence.next_due_date
 -- resolved: Recurring/subscription-like examples include mobile, AI, hosting, and donations.
 -- resolved: Mobile, internet, hosting, and AI tools default to the Subscriptions category.
 -- resolved: Donations can be recurring without necessarily belonging to a Subscriptions category.
+-- resolved: Tenant users cannot manage article categories.
+-- resolved: Tenant users can manage tenant-only subcategories under Utilities and Subscriptions only.
+-- resolved: Disabling a tenant-managed subcategory preserves historical references but removes it from pickers.
+-- resolved: ExpenseContext is not a tenant boundary and does not scope taxonomy visibility.
 -- resolved: Utility workflow uses purchased_at / paid date only for first-release reporting;
 --           billing period and due date are deferred.
 -- resolved: Utility and recurring workflows apply to both web and mobile clients, with shared

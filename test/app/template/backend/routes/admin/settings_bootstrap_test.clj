@@ -187,3 +187,72 @@
           (is (= ["display_name"]
               (get-in (settings-io/read-user-table-columns db)
               [:suppliers :available-columns]))))))))
+
+          (deftest bootstrap-backfills-article-taxonomy-default-config-on-existing-user-rows
+            (testing "bootstrap reconciles stale taxonomy user config without clobbering unrelated entities"
+              (let [db fixtures/*test-db*
+                stale-user-view-options {:categories {:display-defaults {:show-add-button? true
+                                 :show-edit? true
+                                 :show-delete? true}}
+                         :suppliers {:display-defaults {:per-page 100}}}
+                stale-user-form-fields {:subcategories {:create-fields ["category_id" "name" "description"]
+                            :edit-fields ["category_id" "name" "description"]
+                            :field-config {:name {:type "text" :label "Custom Name"}
+                                   :category_id {:type "select"}}}
+                        :suppliers {:create-fields ["display_name"]}}
+                stale-user-table-columns {:subcategories {:available-columns ["category_name" "name" "description" "created_at"]
+                              :default-visible-columns ["name" "category_name" "description" "created_at"]
+                              :filterable-columns ["name" "category_name" "description" "created_at"]
+                              :sortable-columns ["name" "category_name" "created_at"]
+                              :always-visible ["name"]
+                              :column-metadata {:name {:label-key :common/subcategory-name}}}
+                        :suppliers {:available-columns ["display_name"]}}
+                user-defaults {:entities {}
+                   :view-options {:categories {:display-defaults {:show-add-button? false
+                                  :show-edit? false
+                                  :show-delete? false}}
+                          :subcategories {:display-defaults {:show-add-button? true}}}
+                   :form-fields {:subcategories {:create-fields ["category_id" "name" "description"]
+                             :edit-fields ["name" "description"]
+                             :field-config {:name {:type "text" :label "Name"}
+                                    :description {:type "textarea"}}}}
+                   :table-columns {:subcategories {:available-columns ["category_name" "name" "description" "is_active" "is_system_default" "created_at"]
+                               :default-visible-columns ["name" "category_name" "description" "is_active" "created_at"]
+                               :filterable-columns ["name" "category_name" "description" "is_active" "created_at"]
+                               :sortable-columns ["name" "category_name" "is_active" "is_system_default" "created_at"]
+                               :always-visible ["name"]
+                               :column-metadata {:name {:label-key :common/subcategory-name}
+                                     :is_active {:label "Active"}
+                                     :is_system_default {:label "System default"}}}
+                           :suppliers {:available-columns ["display_name"]}}}]
+            (clear-runtime-configs! db)
+            (settings-io/write-user-view-options! db stale-user-view-options)
+            (settings-io/write-user-form-fields! db stale-user-form-fields)
+            (settings-io/write-user-table-columns! db stale-user-table-columns)
+            (clojure.core/with-redefs-fn
+              {#'settings-bootstrap/user-defaults (fn [config-key]
+                           (get user-defaults config-key))
+               #'settings-bootstrap/admin-defaults (fn [_] {})}
+              (fn []
+                (is (= :ok (settings-bootstrap/bootstrap-runtime-configs! db)))
+                (is (false? (get-in (settings-io/read-user-view-options db)
+                    [:categories :display-defaults :show-add-button?])))
+                (is (false? (get-in (settings-io/read-user-view-options db)
+                    [:categories :display-defaults :show-edit?])))
+                (is (false? (get-in (settings-io/read-user-view-options db)
+                    [:categories :display-defaults :show-delete?])))
+                (is (= ["name" "description"]
+                  (get-in (settings-io/read-user-form-fields db)
+                  [:subcategories :edit-fields])))
+                (is (= {:type "text" :label "Custom Name"}
+                  (get-in (settings-io/read-user-form-fields db)
+                  [:subcategories :field-config :name])))
+                (is (some #{"is_active"}
+                  (get-in (settings-io/read-user-table-columns db)
+                  [:subcategories :available-columns])))
+                (is (= {:label "System default"}
+                  (get-in (settings-io/read-user-table-columns db)
+                  [:subcategories :column-metadata :is_system_default])))
+                (is (= ["display_name"]
+                  (get-in (settings-io/read-user-table-columns db)
+                  [:suppliers :available-columns]))))))))

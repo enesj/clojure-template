@@ -200,6 +200,9 @@
            :join [[:categories :c] [:= :c.id :sub.category_id]]
            :where [:and
                    (sh/fuzzy-text-where [:sub.name] term p)
+               [:or
+                [:is :sub.tenant_id nil]
+                [:= :sub.tenant_id tenant-id]]
                    [:or
                     [:exists {:select [1]
                               :from [[:expense_items :ei]]
@@ -219,7 +222,9 @@
           {:select [[:s.id :id] [:s.name :name] [:c.name :category_name]]
            :from [[:subcategories :s]]
            :join [[:categories :c] [:= :c.id :s.category_id]]
-           :where (sh/fuzzy-text-where [:s.name] term p)
+             :where [:and
+               (sh/fuzzy-text-where [:s.name] term p)
+               [:is :s.tenant_id nil]]
            :order-by [[:c.name :asc] [:s.name :asc]]
            :limit limit}))
       {:builder-fn rs/as-unqualified-lower-maps})))

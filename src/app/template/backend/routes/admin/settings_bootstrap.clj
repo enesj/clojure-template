@@ -43,6 +43,8 @@
 
 (def ^:private expense-categories-entity :expense-categories)
 (def ^:private expense-contexts-entity :expense-contexts)
+(def ^:private article-categories-entity :categories)
+(def ^:private article-subcategories-entity :subcategories)
 
 (declare admin-defaults user-defaults)
 
@@ -158,6 +160,48 @@
         (update :column-config merge-missing-map-entries (:column-config default-entity))
         (update :column-metadata merge-missing-map-entries (:column-metadata default-entity))))))
 
+(defn- reconcile-article-taxonomy-view-options
+  [current defaults]
+  (-> current
+    (reconcile-entity-map-entry defaults article-subcategories-entity merge-missing-deep-map-entries)
+    (reconcile-entity-map-entry defaults article-categories-entity
+      (fn [current-entity default-entity]
+        (-> current-entity
+          (update :display-defaults merge-missing-deep-map-entries (:display-defaults default-entity))
+          (assoc-in [:display-defaults :show-add-button?]
+            (get-in default-entity [:display-defaults :show-add-button?]))
+          (assoc-in [:display-defaults :show-edit?]
+            (get-in default-entity [:display-defaults :show-edit?]))
+          (assoc-in [:display-defaults :show-delete?]
+            (get-in default-entity [:display-defaults :show-delete?]))
+          (update :display-locks merge-missing-deep-map-entries (:display-locks default-entity))
+          (update :column-defaults merge-missing-deep-map-entries (:column-defaults default-entity))
+          (update :column-locks merge-missing-deep-map-entries (:column-locks default-entity))
+          (update :list-config merge-missing-deep-map-entries (:list-config default-entity)))))))
+
+(defn- reconcile-article-taxonomy-form-fields
+  [current defaults]
+  (reconcile-entity-map-entry current defaults article-subcategories-entity
+    (fn [current-entity default-entity]
+      (-> current-entity
+        (update :create-fields merge-ordered-values (:create-fields default-entity))
+        (assoc :edit-fields (:edit-fields default-entity))
+        (update :field-config merge-missing-map-entries (:field-config default-entity))))))
+
+(defn- reconcile-article-taxonomy-table-columns
+  [current defaults]
+  (reconcile-entity-map-entry current defaults article-subcategories-entity
+    (fn [current-entity default-entity]
+      (-> current-entity
+        (update :available-columns merge-ordered-values (:available-columns default-entity))
+        (update :default-visible-columns merge-ordered-values (:default-visible-columns default-entity))
+        (update :filterable-columns merge-ordered-values (:filterable-columns default-entity))
+        (update :sortable-columns merge-ordered-values (:sortable-columns default-entity))
+        (update :always-visible merge-ordered-values (:always-visible default-entity))
+        (update :computed-fields merge-missing-map-entries (:computed-fields default-entity))
+        (update :column-config merge-missing-map-entries (:column-config default-entity))
+        (update :column-metadata merge-missing-map-entries (:column-metadata default-entity))))))
+
 (defn- reconcile-runtime-config!
   [db {:keys [scope config-key read-fn write-fn defaults merge-fn]}]
   (let [current (or (read-fn db) {})
@@ -218,6 +262,28 @@
              :write-fn settings-io/write-user-table-columns!
              :defaults (user-defaults :table-columns)
              :merge-fn reconcile-expense-context-table-columns}]]
+    (reconcile-runtime-config! db config)))
+
+(defn- reconcile-article-taxonomy-default-config!
+  [db]
+  (doseq [config [{:scope "user"
+                   :config-key :view-options
+                   :read-fn settings-io/read-user-view-options
+                   :write-fn settings-io/write-user-view-options!
+                   :defaults (user-defaults :view-options)
+                   :merge-fn reconcile-article-taxonomy-view-options}
+                  {:scope "user"
+                   :config-key :form-fields
+                   :read-fn settings-io/read-user-form-fields
+                   :write-fn settings-io/write-user-form-fields!
+                   :defaults (user-defaults :form-fields)
+                   :merge-fn reconcile-article-taxonomy-form-fields}
+                  {:scope "user"
+                   :config-key :table-columns
+                   :read-fn settings-io/read-user-table-columns
+                   :write-fn settings-io/write-user-table-columns!
+                   :defaults (user-defaults :table-columns)
+                   :merge-fn reconcile-article-taxonomy-table-columns}]]
     (reconcile-runtime-config! db config)))
 
 (defn- read-edn-default!
@@ -374,6 +440,7 @@
 
     (reconcile-expense-category-default-config! db)
     (reconcile-expense-context-default-config! db)
+    (reconcile-article-taxonomy-default-config! db)
 
     (log/info "Bootstrap: runtime frontend config check complete")
     :ok

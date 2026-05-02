@@ -12,7 +12,7 @@
   :removed-fields {:edit-fields ["raw_label"]}},
  :subcategories
  {:create-fields ["category_id" "name" "description"],
-  :edit-fields ["category_id" "name" "description"],
+  :edit-fields ["name" "description"],
   :field-config
   {:category_id
    {:type "select", :label "Category", :options ["categories" "name"]},
