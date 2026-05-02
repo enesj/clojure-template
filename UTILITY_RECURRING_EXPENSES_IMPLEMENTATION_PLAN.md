@@ -46,10 +46,14 @@ Implement the workflows specified in `specs/allium/drafts/expenses/guided-utilit
 - Added Expense Context selectors to manual smart entry, receipt approval, and manual expense edit forms.
 - Added Expense Context columns/filterability to the user expenses list configuration.
 - Added Expense Context multi-select filtering to user expense reports.
+- Added backend recurring reminder workflow support: recurrence date calculation, tenant-scoped reminder generation/listing, editable prefill payloads, and skip/snooze/record actions.
+- Added user-facing template/reminder routes under `/api/v1/expenses/expense-templates` and `/api/v1/expenses/recurring-reminders`.
+- Added focused backend tests for recurrence helper behavior, reminder prefill payloads, and reminder status actions.
 
 ### Next
 
-- Continue backend template/reminder workflows: recurrence helper, reminder generation, skip/snooze/record actions.
+- Build the web recurring/subscriptions page and wire it to the new template/reminder endpoints.
+- Add guided utility entry UI on top of the template/prefill workflow.
 
 ## Data model changes
 
@@ -173,18 +177,18 @@ Constraints/indexes:
 
 ### Phase 3 — Templates and recurring reminders backend
 
-1. Add CRUD/service functions for expense templates and template lines.
-2. Add recurrence helper for next due date.
-3. Add reminder generation for due in-app reminders.
-4. Add endpoints/actions to:
-   - list templates
-   - create/update/archive template
-   - set recurrence
-   - list pending reminders
-   - open reminder prefill
-   - skip reminder
-   - snooze reminder
-   - record reminder after expense creation
+1. [x] Add CRUD/service functions for expense templates and template lines.
+2. [x] Add recurrence helper for next due date.
+3. [x] Add reminder generation for due in-app reminders.
+4. [x] Add endpoints/actions to:
+   - [x] list templates
+   - [x] create/update/archive template
+   - [x] set recurrence
+   - [x] list pending reminders
+   - [x] open reminder prefill
+   - [x] skip reminder
+   - [x] snooze reminder
+   - [x] record reminder after expense creation
 
 ### Phase 4 — Guided utility expense backend
 
@@ -260,7 +264,7 @@ If these are tenant/user configurable today, seed conservatively and avoid overw
 
 1. Schema + backend context support.
 2. Expense context filters.
-3. Templates/reminders backend.
+3. Templates/reminders backend. ✅
 4. Web workflows.
 5. Mobile workflows.
 6. Report/dashboard polish.

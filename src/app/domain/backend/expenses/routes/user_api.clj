@@ -22,6 +22,7 @@
     [app.domain.backend.expenses.handlers.user-expenses.summary :as user-expenses-summary]
     [app.domain.backend.expenses.handlers.user-dashboard :as user-dashboard]
     [app.domain.backend.expenses.handlers.user-manufacturers :as user-manufacturers]
+	[app.domain.backend.expenses.handlers.user-recurring-expenses :as user-recurring-expenses]
 
     [app.domain.backend.expenses.handlers.user-receipts :as user-receipts]
     [app.domain.backend.expenses.handlers.user-store-aliases :as user-store-aliases]
@@ -217,6 +218,22 @@
     ["/batch" {:delete {:handler (user-articles/batch-delete-articles-handler db)}}]
 
     ["/:id" {:put {:handler (user-articles/update-article-handler db)}}]]
+
+   ;; Recurring expense templates and reminders (must come before expense "/:id")
+     ["/expense-templates"
+    ["" {:get {:handler (user-recurring-expenses/list-templates-handler db)}
+         :post {:handler (user-recurring-expenses/create-template-handler db)}}]
+
+    ["/:id" {:put {:handler (user-recurring-expenses/update-template-handler db)}}]
+    ["/:id/archive" {:post {:handler (user-recurring-expenses/archive-template-handler db)}}]]
+
+   ["/recurring-reminders"
+    ["" {:get {:handler (user-recurring-expenses/list-reminders-handler db)}}]
+    ["/generate" {:post {:handler (user-recurring-expenses/generate-reminders-handler db)}}]
+    ["/:id/prefill" {:get {:handler (user-recurring-expenses/reminder-prefill-handler db)}}]
+    ["/:id/skip" {:post {:handler (user-recurring-expenses/skip-reminder-handler db)}}]
+    ["/:id/snooze" {:post {:handler (user-recurring-expenses/snooze-reminder-handler db)}}]
+    ["/:id/record" {:post {:handler (user-recurring-expenses/record-reminder-handler db)}}]]
 
    ;; Expenses CRUD
    ["" {:get {:handler (user-expenses-crud/list-expenses-handler db)}
