@@ -23,6 +23,7 @@
     [app.domain.backend.expenses.handlers.user-dashboard :as user-dashboard]
     [app.domain.backend.expenses.handlers.user-manufacturers :as user-manufacturers]
 	[app.domain.backend.expenses.handlers.user-recurring-expenses :as user-recurring-expenses]
+     [app.domain.backend.expenses.handlers.user-utility-expenses :as user-utility-expenses]
 
     [app.domain.backend.expenses.handlers.user-receipts :as user-receipts]
     [app.domain.backend.expenses.handlers.user-store-aliases :as user-store-aliases]
@@ -234,6 +235,9 @@
     ["/:id/skip" {:post {:handler (user-recurring-expenses/skip-reminder-handler db)}}]
     ["/:id/snooze" {:post {:handler (user-recurring-expenses/snooze-reminder-handler db)}}]
     ["/:id/record" {:post {:handler (user-recurring-expenses/record-reminder-handler db)}}]]
+
+     ;; Guided utility bill workflow (creates a normal expense + item)
+     ["/utility-bills" {:post {:handler (user-utility-expenses/create-utility-expense-handler db app-config)}}]
 
    ;; Expenses CRUD
    ["" {:get {:handler (user-expenses-crud/list-expenses-handler db)}

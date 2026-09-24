@@ -30,6 +30,7 @@
     app.domain.frontend.expenses.events.user-expenses.subcategories
     app.domain.frontend.expenses.events.user-expenses.summary
     app.domain.frontend.expenses.events.user-expenses.unmapped-aliases
+    app.domain.frontend.expenses.events.user-expenses.utility
     app.domain.frontend.expenses.events.user-expenses.workspace-dashboard))
 
 ;; This namespace exists purely to aggregate requires.

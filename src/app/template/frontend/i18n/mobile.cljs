@@ -18,6 +18,8 @@
     :mobile/manual-entry       "Ručni unos"
     :mobile/add-manually       "Dodaj trošak ručno"
     :mobile/add-manually-sub   "Unesi podatke bez računa"
+    :mobile/add-utility        "Dodaj režiju"
+    :mobile/add-utility-sub    "Struja, voda, plin ili grijanje"
     :mobile/pending-reviews    "Na čekanju"
     :mobile/pending-reviews-desc "Računi obrađeni OCR-om, čekaju vašu potvrdu."
     :mobile/review-now         "Pregledaj"
@@ -154,6 +156,7 @@
 
     ;; Mobile toast messages
     :mobile/toast-expense-created "Trošak kreiran"
+    :mobile/toast-utility-created "Račun za režije kreiran"
     :mobile/toast-receipt-uploaded "Račun uspješno učitan"
 
     ;; Mobile quick-add workflow
@@ -184,6 +187,8 @@
     :mobile/manual-entry       "Manual Entry"
     :mobile/add-manually       "Add Expense Manually"
     :mobile/add-manually-sub   "Enter details without receipt"
+    :mobile/add-utility        "Add utility bill"
+    :mobile/add-utility-sub    "Electricity, water, gas or heating"
     :mobile/pending-reviews    "Pending Reviews"
     :mobile/pending-reviews-desc "Receipts processed by OCR, awaiting your confirmation."
     :mobile/review-now         "Review Now"
@@ -320,6 +325,7 @@
 
     ;; Mobile toast messages
     :mobile/toast-expense-created "Expense created"
+    :mobile/toast-utility-created "Utility bill created"
     :mobile/toast-receipt-uploaded "Receipt uploaded successfully"
 
     ;; Mobile quick-add workflow

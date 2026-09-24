@@ -278,6 +278,10 @@
               ($ :p {:class "text-sm text-base-content/70"}
                 (t :expenses-list/subtitle)))
             ($ :div {:class "flex gap-2"}
+              ($ button {:id "btn-expenses-list-add-utility"
+                         :btn-type :primary
+                         :on-click #(rf/dispatch [:navigate-to "/expenses/add-utility"])}
+                (t :expenses-list/btn-add-utility))
               ($ button {:btn-type :ghost
                          :on-click #(rf/dispatch [:navigate-to "/expenses"])}
                 (t :expenses-list/btn-dashboard))))))

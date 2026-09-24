@@ -15,6 +15,7 @@
     [app.domain.frontend.expenses.pages.user.expense-items :refer [expense-items-page]]
     [app.domain.frontend.expenses.pages.user.expense-reports :refer [expense-reports-page]]
     [app.domain.frontend.expenses.pages.user.expense-upload :refer [expense-upload-page]]
+    [app.domain.frontend.expenses.pages.user.utility-expense :refer [utility-expense-page]]
     [app.domain.frontend.expenses.pages.user.profile :refer [profile-page]]
     [app.domain.frontend.expenses.pages.user.expenses-dashboard :refer [expenses-dashboard-page]]
     [app.domain.frontend.expenses.pages.user.expenses-list :refer [expenses-list-page]]
@@ -38,6 +39,7 @@
   The template's current-page component uses this map to render domain pages."
   {:expenses-dashboard expenses-dashboard-page
    :expenses-list expenses-list-page
+    :expense-utility-new utility-expense-page
    :expense-upload expense-upload-page
    :receipts-list receipts-list-page
    :expense-detail expense-detail-page

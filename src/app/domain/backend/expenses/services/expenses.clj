@@ -68,6 +68,12 @@
 
      :else nil)))
 
+(defn- resolved-item-article-id
+  "Choose the article ID for an item, preserving existing alias precedence."
+  [item alias]
+  (or (:article_id alias)
+    (:article_id item)))
+
 (defn- normalize-expense-data
   [expense-data]
   (parsing/normalize-expense-data expense-data))
@@ -323,14 +329,14 @@
            (let [resolved-items (mapv (fn [item]
                                         (require-keys! item [:line_total])
                                         (let [alias (resolve-alias! tx supplier-id item)
-                                              resolved-article-id (:article_id alias)]
+                                              resolved-article-id (resolved-item-article-id item alias)]
                                           (assoc item
                                             :resolved_alias alias
                                             :resolved_alias_id (some-> alias :id)
                                             :resolved_article_id resolved-article-id)))
                                   items*)
                  tenant-id (:tenant_id expense)
-                 item-rows (mapv (fn [{:keys [resolved_alias_id qty unit unit_price line_total price_modified]}]
+                 item-rows (mapv (fn [{:keys [resolved_alias_id resolved_article_id qty unit unit_price line_total price_modified]}]
                                    (cond-> {:id (UUID/randomUUID)
                                             :expense_id expense-id
                                             :alias_id resolved_alias_id
@@ -338,6 +344,7 @@
                                             :unit_price unit_price
                                             :line_total line_total}
                                      tenant-id (assoc :tenant_id tenant-id)
+                                     resolved_article_id (assoc :article_id resolved_article_id)
                                      (some? price_modified) (assoc :price_modified price_modified)
                                      unit (assoc :unit unit)))
                              resolved-items)]
@@ -459,28 +466,30 @@
                (doseq [item update-items]
                  (require-keys! item [:line_total])
                  (let [alias (resolve-alias! tx supplier-id item)
+                       resolved-article-id (resolved-item-article-id item alias)
                        item* (cond-> (select-keys item [:qty :unit :unit_price :line_total])
-                               alias (assoc :alias_id (:id alias)))]
+                         alias (assoc :alias_id (:id alias))
+                         resolved-article-id (assoc :article_id resolved-article-id))]
                    (jdbc/execute!
                      tx
                      (sql/format {:update :expense_items
                                   :set item*
                                   :where [:and
                                           [:= :id (:id item)]
-                                          [:= :expense_id id*]]}))))
+                                      [:= :expense_id id*]]}))))
 
               ;; Insert new items (auto-link from alias when possible).
                (let [resolved-inserts (mapv (fn [item]
                                               (require-keys! item [:line_total])
                                               (let [alias (resolve-alias! tx supplier-id item)
-                                                    resolved-article-id (:article_id alias)]
+                                                    resolved-article-id (resolved-item-article-id item alias)]
                                                 (assoc item
                                                   :resolved_alias alias
                                                   :resolved_alias_id (some-> alias :id)
                                                   :resolved_article_id resolved-article-id)))
                                         insert-items)
                      exp-tenant-id (:tenant_id expense)
-                     item-rows (mapv (fn [{:keys [resolved_alias_id qty unit unit_price line_total]}]
+                     item-rows (mapv (fn [{:keys [resolved_alias_id resolved_article_id qty unit unit_price line_total]}]
                                        (cond-> {:id (UUID/randomUUID)
                                                 :expense_id id*
                                                 :alias_id resolved_alias_id
@@ -488,6 +497,7 @@
                                                 :unit_price unit_price
                                                 :line_total line_total}
                                          exp-tenant-id (assoc :tenant_id exp-tenant-id)
+                                         resolved_article_id (assoc :article_id resolved_article_id)
                                          unit (assoc :unit unit)))
                                  resolved-inserts)
                      _inserted-items (if (seq item-rows)

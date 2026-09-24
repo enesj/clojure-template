@@ -504,6 +504,11 @@
                                :label (t :dashboard/add-expense)
                                :icon "✏️"
                                :on-click #(set-show-quick-add! true)}))
+            (when can-add-expense?
+              ($ shortcut-btn {:id "btn-shortcut-add-utility"
+                               :label (t :dashboard/add-utility)
+                               :icon "💡"
+                               :on-click #(rf/dispatch [:navigate-to "/expenses/add-utility"])}))
             (when can-manage-expense-categories?
               ($ shortcut-btn {:id "btn-shortcut-expense-categories"
                                :label (t :expense-categories/title)

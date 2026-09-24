@@ -31,6 +31,11 @@
     :view :expenses-list
     :controllers (controllers/user-guarded-start :page/init-expenses-list)}
 
+  :expense-utility-new
+  {:name :expense-utility-new
+   :view :expense-utility-new
+   :controllers (controllers/user-guarded-start :page/init-expense-utility-new)}
+
    :expense-upload
    {:name :expense-upload
     :view :expense-upload

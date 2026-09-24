@@ -26,6 +26,9 @@
    ["/expenses"
     {:name :m/expenses
      :view :m/expenses}]
+   ["/expenses/add-utility"
+    {:name :m/expense-utility-new
+     :view :m/upload-utility}]
    ["/expenses/:id"
     {:name :m/expense-detail
      :view :m/expense-detail}]
@@ -52,6 +55,9 @@
    ["/upload/manual"
     {:name :m/upload-manual
      :view :m/upload-manual}]
+   ["/upload/utility"
+    {:name :m/upload-utility
+     :view :m/upload-utility}]
 
    ;; More
    ["/more"

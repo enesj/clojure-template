@@ -135,6 +135,7 @@
   (let [item* (-> item
                 (update-if-present :id #(parse-uuid! :id %))
                 (update-if-present :alias_id #(parse-uuid! :alias_id %))
+                (update-if-present :article_id #(parse-uuid! :article_id %))
                 (update-if-present :raw_label #(some-> % str str/trim))
                 (update-if-present :unit #(some-> % str str/trim str/lower-case blank->nil))
                 (update-if-present :qty #(parse-bigdec! :qty %))

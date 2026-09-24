@@ -18,6 +18,7 @@
     [app.mobile.frontend.pages.reports :refer [reports-page]]
     [app.mobile.frontend.pages.tenant-select :refer [tenant-select-page]]
     [app.mobile.frontend.pages.upload :refer [camera-capture-page upload-page]]
+    [app.mobile.frontend.pages.utility-expense :refer [utility-expense-page]]
     [app.mobile.frontend.routes :as routes]
     [app.template.frontend.events.bootstrap :as bootstrap]
     [clojure.string :as str]
@@ -49,6 +50,7 @@
                   :m/upload-camera ($ camera-capture-page)
                   :m/upload-review ($ receipt-review-page)
                   :m/upload-manual ($ manual-entry-page)
+                  :m/upload-utility ($ utility-expense-page)
                   :m/reports ($ reports-page)
                   :m/receipts ($ receipt-list-page)
                   :m/search ($ expenses-page)

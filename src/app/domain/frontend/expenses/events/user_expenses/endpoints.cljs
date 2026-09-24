@@ -6,6 +6,7 @@
 (def dashboard-endpoint (api/versioned-endpoint "/expenses/dashboard"))
 (def list-endpoint (api/versioned-endpoint "/expenses"))
 (def expense-detail-endpoint (api/versioned-endpoint "/expenses"))
+(def utility-bills-endpoint (api/versioned-endpoint "/expenses/utility-bills"))
 
 (def reports-endpoint (api/versioned-endpoint "/expenses/reports"))
 (def summary-endpoint (str reports-endpoint "/summary"))

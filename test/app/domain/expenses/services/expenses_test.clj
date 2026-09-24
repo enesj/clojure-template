@@ -99,6 +99,24 @@
       (is (= (:canonical_name article-aliased) (:article_canonical_name item)))
       (is (not= (:canonical_name article-explicit) (:article_canonical_name item))))))
 
+(deftest expenses-persists-explicit-article-id-when-no-alias-matches
+  (when-let [db fixtures/*test-db*]
+    (let [supplier (:supplier (suppliers/find-or-create-supplier! db "Utility Provider" {}))
+          payer (th/create-payer! db {:type "cash" :label "Cash"})
+          article (articles/create-article! db {:canonical_name (str "Electricity bill-" (UUID/randomUUID))})
+          expense (expenses/create-expense! db
+                    {:supplier_id (:id supplier)
+                     :payer_id (:id payer)
+                     :purchased_at (now)
+                     :total_amount (bigdec "42.00")
+                     :currency "BAM"}
+                    [{:raw_label "Electricity bill"
+                      :article_id (:id article)
+                      :line_total (bigdec "42.00")}])
+          item (-> expense :items first)]
+      (is (= "Electricity bill" (:raw_label item)))
+      (is (= (:canonical_name article) (:article_canonical_name item))))))
+
 (deftest expenses-auto-linking-skips-blank-or-short-labels
   (when-let [db fixtures/*test-db*]
     (let [supplier (:supplier (suppliers/find-or-create-supplier! db "BlankLabel Supplier" {}))

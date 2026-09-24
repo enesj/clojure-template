@@ -75,6 +75,12 @@
     {:db (assoc-in db (paths/current-page) :expense-upload)}))
 
 (rf/reg-event-fx
+  :page/init-expense-utility-new
+  common-interceptors
+  (fn [{:keys [db]} _]
+    {:db (assoc-in db (paths/current-page) :expense-utility-new)}))
+
+(rf/reg-event-fx
   :page/init-receipts-list
   common-interceptors
   (fn [{:keys [db]} _]
@@ -250,11 +256,21 @@
                                (into {}
                                  (map (fn [[k v]] [(keyword k) v])
                                    (js->clj entries)))))
+              target-url (str path (.-search url) (.-hash url))
               match (router-util/match-by-path path)
               route-name (get-in match [:data :name])
-              path-params (get-in match [:parameters :path])]
+              match (cond-> match
+                      query-params (assoc-in [:parameters :query] query-params)
+                      (seq (.-hash url)) (assoc-in [:parameters :fragment] (.substring (.-hash url) 1)))]
           (if route-name
-            (rtfe/push-state route-name path-params query-params)
+            (do
+              ;; Dispatch directly from the freshly registered router match instead
+              ;; of asking reitit.easy to reverse a route name. In dev, Shadow can
+              ;; hot-reload this effect and the route table while reitit.easy still
+              ;; holds the startup router, which made new literal paths like
+              ;; /expenses/add-utility fall through to older parameter routes.
+              (.pushState js/history nil "" target-url)
+              (rf/dispatch [:navigate-to match]))
             (do
               (log/warn "No route match for path navigation" {:path route-or-path})
               (when location

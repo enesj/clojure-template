@@ -12,6 +12,7 @@
    {:id :unmapped-items :path "/unmapped-items" :spa-fallback? true}
    {:id :expenses-dashboard-alias :path "/expenses/dashboard" :spa-fallback? true}
    {:id :expenses-list :path "/expenses/list" :spa-fallback? true}
+  {:id :expense-utility-new :path "/expenses/add-utility" :spa-fallback? true}
    {:id :expense-upload :path "/expenses/upload" :spa-fallback? true}
    {:id :receipts :path "/receipts" :spa-fallback? true}
    {:id :receipt-detail :path "/receipts/:receipt-id" :spa-fallback? true}

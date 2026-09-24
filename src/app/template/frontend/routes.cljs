@@ -38,6 +38,11 @@
   (rtf/router routes {:data {:coercion rcm/coercion}
                       :conflicts prefer-literal-route-conflicts}))
 
+;; Keep the path-matching indirection in sync when Shadow hot-reloads this
+;; namespace. Without this, newly added literal routes can be matched by an old
+;; router and fall through to parameterised routes such as /expenses/:expense-id.
+(router-util/set-router! router)
+
 (defn on-navigate
   "Handle navigation to new routes with proper error handling"
   [new-match]

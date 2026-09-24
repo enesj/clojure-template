@@ -33,6 +33,7 @@
             :m/upload-camera :upload
             :m/upload-review :upload
             :m/upload-manual :upload
+            :m/upload-utility :upload
             :m/reports :reports
             :m/more :more
             :m/receipts :more
