@@ -1,0 +1,46 @@
+{
+  "mcp": {
+    "servers": {
+      "clojure-mcp": {
+        "command": "/bin/sh",
+        "args": [
+          "-c",
+          "cd /Users/enes/Projects/clojure-mcp && PATH=/opt/homebrew/bin:$PATH && clojure -X:mcp-shadow-dual"
+        ],
+        "env": {
+          "HOME": "/tmp"
+        },
+        "tools": {
+          "read_file": {
+            "approval_mode": "approve"
+          },
+          "glob_files": {
+            "approval_mode": "approve"
+          },
+          "grep": {
+            "approval_mode": "approve"
+          }
+        }
+      },
+      "postgres": {
+        "command": "/bin/sh",
+        "args": [
+          "-c",
+          "repo_root=\"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\"; set -a; [ -f \"$repo_root/.postgres.env\" ] && . \"$repo_root/.postgres.env\"; set +a; exec /Users/enes/Projects/toolbox --prebuilt postgres --stdio"
+        ]
+      },
+      "chrome-devtools": {
+        "command": "npx",
+        "args": [
+          "chrome-devtools-mcp@latest",
+          "--autoConnect"
+        ],
+        "tools": {
+          "new_page": {
+            "approval_mode": "approve"
+          }
+        }
+      }
+    }
+  }
+}
