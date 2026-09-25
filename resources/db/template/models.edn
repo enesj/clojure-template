@@ -1,8 +1,12 @@
 {;; Users (application users)
  :users {:fields [[:id :uuid {:primary-key true}]
-                  [:email_ciphertext :text {:null false}]
-                  [:email_lookup_hash [:varchar 64] {:null false}]
-                  [:email_key_version [:varchar 32] {:null false}]
+                  ;; Legacy email remains until the privacy backfill/cutover lands.
+                  [:email [:varchar 255] {:null false
+                                          :unique true
+                                          :check [:raw "email ~* '^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$'"]}]
+                  [:email_ciphertext :text]
+                  [:email_lookup_hash [:varchar 64]]
+                  [:email_key_version [:varchar 32]]
                   [:full_name [:varchar 255]]
                   [:password_hash :text {:null false}]
                   [:status [:enum :user-status] {:null false :default "active"}]
@@ -22,9 +26,13 @@
 
  ;; Admin users (system administrators)
  :admins {:fields [[:id :uuid {:primary-key true}]
-                   [:email_ciphertext :text {:null false}]
-                   [:email_lookup_hash [:varchar 64] {:null false}]
-                   [:email_key_version [:varchar 32] {:null false}]
+                   ;; Legacy email remains until the privacy backfill/cutover lands.
+                   [:email [:varchar 255] {:null false
+                                           :unique true
+                                           :check [:raw "email ~* '^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$'"]}]
+                   [:email_ciphertext :text]
+                   [:email_lookup_hash [:varchar 64]]
+                   [:email_key_version [:varchar 32]]
                    [:full_name [:varchar 255]]
                    [:password_hash :text {:null false}]
                    [:role [:enum :admin-role] {:null false :default "admin"}]
@@ -58,9 +66,11 @@
  ;; Admin invitations (email-based admin onboarding)
  :admin_invitations
  {:fields [[:id :uuid {:primary-key true}]
-           [:email_ciphertext :text {:null false}]
-           [:email_lookup_hash [:varchar 64] {:null false}]
-           [:email_key_version [:varchar 32] {:null false}]
+           ;; Legacy email remains until the privacy backfill/cutover lands.
+           [:email :text {:null false}]
+           [:email_ciphertext :text]
+           [:email_lookup_hash [:varchar 64]]
+           [:email_key_version [:varchar 32]]
            [:role [:enum :admin-invitation-role] {:null false}]
            [:invited_by :uuid {:foreign-key :admins/id :null false :on-delete :cascade}]
            [:status [:enum :admin-invitation-status] {:null false :default "pending"}]
@@ -125,9 +135,11 @@
  ;; Tenant Invitations (pending invitations to join a tenant)
  :tenant_invitations {:fields [[:id :uuid {:primary-key true}]
                                [:tenant_id :uuid {:foreign-key :tenants/id :null false :on-delete :cascade}]
-                               [:email_ciphertext :text {:null false}]
-                               [:email_lookup_hash [:varchar 64] {:null false}]
-                               [:email_key_version [:varchar 32] {:null false}]
+                               ;; Legacy email remains until the privacy backfill/cutover lands.
+                               [:email :text {:null false}]
+                               [:email_ciphertext :text]
+                               [:email_lookup_hash [:varchar 64]]
+                               [:email_key_version [:varchar 32]]
                                [:role [:enum :invitation-role] {:null false}]
                                [:invited_by :uuid {:foreign-key :users/id :null false :on-delete :cascade}]
                                [:status [:enum :invitation-status] {:null false :default "pending"}]

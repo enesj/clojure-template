@@ -125,13 +125,42 @@
     (when match
       (second match))))
 
+(defn drop-migration-file?
+  "Return true when the migration file is an auto-generated drop_* extended migration."
+  [migration-filename]
+  (boolean (re-find #"^\d+_drop_(?:function|trigger|policy|view)_" migration-filename)))
+
+(defn- active-migrations-by-name
+  "Return a name->source-migration map for currently active extended migrations.
+
+  We walk migration history in order, adding normal create migrations and removing
+  names when a generated drop_* migration appears. This reflects the net object
+  state implied by migration history rather than just the presence of filenames."
+  [existing-migrations type]
+  (reduce (fn [active migration-file]
+            (let [migration-name (get-migration-name migration-file)]
+              (cond
+                (not= type (get-migration-type migration-file))
+                active
+
+                (nil? migration-name)
+                active
+
+                (drop-migration-file? migration-file)
+                (dissoc active migration-name)
+
+                :else
+                (assoc active migration-name migration-file))))
+    {}
+    existing-migrations))
+
 (defn filter-new-edn-items
   "Filter out EDN items that already have migrations. Type must be one of
   :fn, :trg, :pol, :view."
   [edn-map type existing-migrations]
-  (let [existing-names (->> existing-migrations
-                         (filter #(= type (get-migration-type %)))
-                         (map get-migration-name)
+  (let [existing-names (-> existing-migrations
+                         (active-migrations-by-name type)
+                         (keys)
                          (set))]
     (reduce-kv (fn [m k v]
                  (if (and k (existing-names (name k)))
@@ -145,8 +174,7 @@
   Type must be one of :fn, :trg, :pol, :view."
   [existing-migrations edn-map type]
   (let [current-names (set (map name (filter identity (keys edn-map))))
-        migrations-for-type (->> existing-migrations
-                              (filter #(= type (get-migration-type %))))]
+        migrations-for-type (vals (active-migrations-by-name existing-migrations type))]
     (filter #(not (contains? current-names (get-migration-name %)))
       migrations-for-type)))
 

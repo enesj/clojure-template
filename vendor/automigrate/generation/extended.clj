@@ -12,6 +12,36 @@
 (def ^:private FORWARD-MIGRATION-DELIMITER "-- FORWARD")
 (def ^:private BACKWARD-MIGRATION-DELIMITER "-- BACKWARD")
 
+(defn- migration-type->label
+  [migration-type]
+  (case migration-type
+    :fn "function"
+    :trg "trigger"
+    :pol "policy"
+    :view "view"
+    (name migration-type)))
+
+(defn- migration-type->extension
+  [migration-type]
+  (case migration-type
+    :fn "fn"
+    :trg "trg"
+    :pol "pol"
+    :view "view"
+    (name migration-type)))
+
+(defn- parse-migration-content
+  [migration-file-path]
+  (let [content (slurp migration-file-path)
+        [forward backward] (str/split content #"-- BACKWARD" 2)
+        forward-sql (some-> forward
+                      (str/replace #"-- FORWARD" "")
+                      str/trim
+                      not-empty)
+        backward-sql (some-> backward str/trim not-empty)]
+    {:forward-sql forward-sql
+     :backward-sql backward-sql}))
+
 ;; Re-export component generation functions
 (def generate-function-migrations components/generate-function-migrations)
 (def generate-trigger-migrations components/generate-trigger-migrations)
@@ -108,19 +138,21 @@
       ;; Create DROP migrations for orphaned migrations first
     (let [drop-migrations-created (atom [])
           create-drop-migration (fn [migration-file migration-number]
-                                  (let [type (files/get-migration-type migration-file)
+                                  (let [migration-type (files/get-migration-type migration-file)
+                                        type-label (migration-type->label migration-type)
+                                        type-ext (migration-type->extension migration-type)
                                         name (files/get-migration-name migration-file)
+                                        source-file-path (file-util/join-path migrations-full-dir migration-file)
+                                        {:keys [forward-sql backward-sql]} (parse-migration-content source-file-path)
                                         file-name (format "%04d_drop_%s_%s.%s"
-                                                    migration-number type name
-                                                    (case type
-                                                      "function" "fn"
-                                                      "trigger" "trg"
-                                                      "policy" "pol"
-                                                      "view" "view"))
+                                                    migration-number type-label name type-ext)
                                         file-path (file-util/join-path migrations-full-dir file-name)
-                                          ;; This is a placeholder, real drop logic might be more complex
-                                        drop-sql (format "DROP %s IF EXISTS %s;" (str/upper-case type) name)
-                                        recreate-sql (format "-- Cannot recreate %s %s - EDN file was deleted" type name)
+                                        drop-sql (or backward-sql
+                                                   (format "-- Cannot drop %s %s automatically; source migration missing backward SQL"
+                                                     type-label name))
+                                        recreate-sql (or forward-sql
+                                                       (format "-- Cannot recreate %s %s automatically; source migration missing forward SQL"
+                                                         type-label name))
                                         content (format "%s\n%s\n\n%s\n%s"
                                                   FORWARD-MIGRATION-DELIMITER
                                                   drop-sql

@@ -15,7 +15,7 @@ umask 077
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 DEFAULT_PROJECT_NAME="$(basename "$REPO_ROOT")"
 DEFAULT_PROJECTS_ROOT="$(dirname "$REPO_ROOT")"
-DEFAULT_SECRETS_DIR="$HOME/Library/Application Support/single-tenant-template/secrets"
+DEFAULT_SECRETS_DIR="$HOME/Library/Application Support/clojure-template/secrets"
 DEFAULT_IMAGE_PATH="$DEFAULT_SECRETS_DIR/Secrets.sparsebundle"
 DEFAULT_MOUNT_POINT="$DEFAULT_SECRETS_DIR/Secrets-mounted"
 
@@ -70,7 +70,7 @@ usage() {
 Manage the encrypted local secrets vault stored in a macOS sparsebundle.
 
 By default this creates/uses:
-  image:   ~/Library/Application Support/single-tenant-template/secrets/Secrets.sparsebundle
+  image:   ~/Library/Application Support/clojure-template/secrets/Secrets.sparsebundle
   volume:  Secrets
   repos:   Projects/ and General/ inside the mounted volume
 
@@ -123,8 +123,8 @@ Options:
 
 Examples:
   bb archive-secrets
-  bb archive-secrets --projects --project-name single-tenant-template
-  bb archive-secrets --projects --project-name single-tenant-template --include-railway
+  bb archive-secrets --projects --project-name clojure-template
+  bb archive-secrets --projects --project-name clojure-template --include-railway
   bb archive-secrets --general
   bb secrets-commit-projects
   bb secrets-commit-general "2026-04-29 12:30 UTC"

@@ -70,15 +70,4 @@
  {:action :add-column,
   :field-name :file-purged-at,
   :model-name :receipts,
-  :options {:type :timestamptz}}
- {:action :alter-type,
-  :type-name :audit-actor-type,
-  :model-name :users,
-  :options {:choices ["user" "admin" "system"], :type :enum},
-  :changes
-  {:choices {:from ["user" "admin"], :to ["user" "admin" "system"]}}}
- {:action :alter-column,
-  :field-name :actor-id,
-  :model-name :audit_logs,
-  :options {:type :uuid},
-  :changes {:null {:from false, :to :EMPTY}}})
+  :options {:type :timestamptz}})

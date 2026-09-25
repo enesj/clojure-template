@@ -1,6 +1,6 @@
-# Single-Tenant SaaS Template
+# clojure-template
 
-This repository is the **single-tenant template** derived from the Hosting multi-tenant app. Use it as a clean starting point for building your own product.
+This repository is **clojure-template**, a single-tenant starter derived from the Hosting multi-tenant app. Use it as a clean starting point for building your own product.
 
 ## Quick Start
 
@@ -199,7 +199,7 @@ Key configuration files:
 
 ### Documentation
 
-- `docs/index.md` — Single-tenant template documentation entry point
+- `docs/index.md` — clojure-template documentation entry point
 - `docs/general/index.md` — General overview, ops, and architecture
 - `docs/template/backend/single-tenant-template.md` — What this template includes and how to extend it
 - `docs/general/operations/README.md` — Dev/startup/testing commands

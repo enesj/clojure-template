@@ -149,7 +149,8 @@
    column drops in the same generated migration.
 
    Automigrate reconstructs model state from EDN schema migrations only, so SQL-only
-   migrations like 0071_expenses_is_posted_drop can be rediscovered forever.
+  migrations like 0048_audit_system_actor_type.sql and
+  0071_expenses_is_posted_drop can be rediscovered forever.
    PostgreSQL also auto-drops indexes that depend on a dropped column; suppressing
    these exact redundant index-drop actions avoids a non-idempotent drop after the
    column action has already removed the index. Filtering only these exact actions
@@ -158,6 +159,17 @@
   #{{:action :drop-column
      :field-name :is-posted
      :model-name :expenses}
+   {:action :alter-type
+    :type-name :audit-actor-type
+    :model-name :users
+    :options {:choices ["user" "admin" "system"] :type :enum}
+    :changes {:choices {:from ["user" "admin"]
+                 :to ["user" "admin" "system"]}}}
+   {:action :alter-column
+    :field-name :actor-id
+    :model-name :audit_logs
+    :options {:type :uuid}
+    :changes {:null {:from false :to :EMPTY}}}
     {:action :drop-index
      :index-name :idx-expenses-is-posted
      :model-name :expenses}
@@ -171,6 +183,87 @@
      :index-name :uniq-user-expense-settings-tenant-user
      :model-name :user_expense_settings}})
 
+(def ^:private deferred-email-cutover-actions
+  "Generated cutover actions from 0062 that must stay deferred until an
+   application-level backfill exists for legacy plaintext email rows. Keeping
+   these scoped to the historical file avoids suppressing a future intentional
+   cutover migration after the backfill is implemented."
+  #{{:action :alter-column
+     :field-name :email-ciphertext
+     :model-name :admins
+     :options {:null false :type :text}
+     :changes {:null {:from :EMPTY :to false}}}
+    {:action :alter-column
+     :field-name :email-key-version
+     :model-name :users
+     :options {:null false :type [:varchar 32]}
+     :changes {:null {:from :EMPTY :to false}}}
+    {:action :alter-column
+     :field-name :email-lookup-hash
+     :model-name :tenant_invitations
+     :options {:null false :type [:varchar 64]}
+     :changes {:null {:from :EMPTY :to false}}}
+    {:action :alter-column
+     :field-name :email-ciphertext
+     :model-name :tenant_invitations
+     :options {:null false :type :text}
+     :changes {:null {:from :EMPTY :to false}}}
+    {:action :alter-column
+     :field-name :email-lookup-hash
+     :model-name :admin_invitations
+     :options {:null false :type [:varchar 64]}
+     :changes {:null {:from :EMPTY :to false}}}
+    {:action :alter-column
+     :field-name :email-lookup-hash
+     :model-name :admins
+     :options {:null false :type [:varchar 64]}
+     :changes {:null {:from :EMPTY :to false}}}
+    {:action :alter-column
+     :field-name :email-key-version
+     :model-name :admin_invitations
+     :options {:null false :type [:varchar 32]}
+     :changes {:null {:from :EMPTY :to false}}}
+    {:action :alter-column
+     :field-name :email-ciphertext
+     :model-name :admin_invitations
+     :options {:null false :type :text}
+     :changes {:null {:from :EMPTY :to false}}}
+    {:action :drop-column
+     :field-name :email
+     :model-name :tenant_invitations}
+    {:action :alter-column
+     :field-name :email-key-version
+     :model-name :tenant_invitations
+     :options {:null false :type [:varchar 32]}
+     :changes {:null {:from :EMPTY :to false}}}
+    {:action :drop-column
+     :field-name :email
+     :model-name :users}
+    {:action :alter-column
+     :field-name :email-key-version
+     :model-name :admins
+     :options {:null false :type [:varchar 32]}
+     :changes {:null {:from :EMPTY :to false}}}
+    {:action :alter-column
+     :field-name :email-lookup-hash
+     :model-name :users
+     :options {:null false :type [:varchar 64]}
+     :changes {:null {:from :EMPTY :to false}}}
+    {:action :drop-column
+     :field-name :email
+     :model-name :admins}
+    {:action :alter-column
+     :field-name :email-ciphertext
+     :model-name :users
+     :options {:null false :type :text}
+     :changes {:null {:from :EMPTY :to false}}}
+    {:action :drop-column
+     :field-name :email
+     :model-name :admin_invitations}})
+
+(def ^:private file-scoped-suppressed-schema-actions
+  {"0062_schema.edn" deferred-email-cutover-actions})
+
 (defn- schema-migration-files
   "Return the current generated schema migration files."
   []
@@ -178,19 +271,51 @@
     (filter #(re-matches #"\d+_.*\.edn" (.getName %)))
     set))
 
+(defn- suppressed-schema-actions-for-file
+  [file]
+  (into sql-only-schema-actions
+    (get file-scoped-suppressed-schema-actions (.getName ^java.io.File file))))
+
+(defn- sanitize-schema-migration-file!
+  [file {:keys [preserve-empty?]
+         :or {preserve-empty? false}}]
+  (let [actions (edn/read-string (slurp file))
+        suppressed-actions (suppressed-schema-actions-for-file file)
+        sanitized-actions (remove suppressed-actions actions)
+        removed-count (- (count actions) (count sanitized-actions))]
+    (when (pos? removed-count)
+      (cond
+        (seq sanitized-actions)
+        (spit file (with-out-str (pprint/pprint sanitized-actions)))
+
+        preserve-empty?
+        (spit file (with-out-str (pprint/pprint '())))
+
+        :else
+        (.delete file))
+      (println (format "Filtered %d suppressed schema action(s) from %s"
+                 removed-count
+                 (.getPath file))))))
+
+(defn- sanitize-schema-migration-files!
+  [files opts]
+  (doseq [file (sort-by #(.getName ^java.io.File %) files)]
+    (sanitize-schema-migration-file! file opts)))
+
 (defn- sanitize-generated-schema-migrations!
   "Remove exact SQL-only schema actions from newly generated EDN migrations."
   [before-files]
-  (doseq [file (remove before-files (schema-migration-files))]
-    (let [actions (edn/read-string (slurp file))
-          sanitized-actions (remove sql-only-schema-actions actions)]
-      (when (not= actions sanitized-actions)
-        (if (seq sanitized-actions)
-          (spit file (with-out-str (pprint/pprint sanitized-actions)))
-          (.delete file))
-        (println (format "Filtered %d SQL-only schema action(s) from %s"
-                   (- (count actions) (count sanitized-actions))
-                   (.getPath file)))))))
+  (sanitize-schema-migration-files! (remove before-files (schema-migration-files))
+    {:preserve-empty? false}))
+
+(defn- sanitize-existing-schema-migrations!
+  "Rewrite known-bad generated schema migrations through the same suppression
+   rules used for new generations. Existing historical files are preserved as
+   explicit no-op migrations when all actions are filtered so numbering remains
+   stable across environments."
+  []
+  (sanitize-schema-migration-files! (schema-migration-files)
+    {:preserve-empty? true}))
 
 (defn make-schema-migration!
   "Generate schema migration from consolidated models with function-default preprocessing."
@@ -200,6 +325,7 @@
         preprocessor (requiring-resolve 'app.template.backend.migrations.function-defaults/load-and-preprocess-models)
         before-files (schema-migration-files)]
     (try
+      (sanitize-existing-schema-migrations!)
       (let [processed (preprocessor models-file-path)]
         (spit temp-models-file (with-out-str (pprint/pprint processed))))
       (am/make {:models-file "db/models_processed.edn"
@@ -549,7 +675,8 @@
              :as opts}]
    ;; Refresh custom HoneySQL clauses in long-lived REPLs before enum/type DDL.
    (require 'automigrate.util.db :reload)
-   (let [migration-res (am/migrate {:jdbc-url (get-jdbc-url profile)})
+     (sanitize-existing-schema-migrations!)
+     (let [migration-res (am/migrate {:jdbc-url (get-jdbc-url profile)})
          report (when verify?
                   (alignment-report profile))
          diff? (when verify?

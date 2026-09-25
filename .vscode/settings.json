@@ -3,13 +3,13 @@
     ".github/copilot-instructions.md": true
   },
   "chat.mcp.serverSampling": {
-    "single-tenant-template/.vscode/mcp.json: clojure-mcp": {
+    "clojure-template/.vscode/mcp.json: clojure-mcp": {
       "allowedModels": [
         "copilot/gpt-5.1-codex-max",
         "copilot/gpt-5.2"
       ]
     },
-    "single-tenant-template/.vscode/mcp.json: chrome-devtools": {
+    "clojure-template/.vscode/mcp.json: chrome-devtools": {
       "allowedModels": [
         "copilot/gpt-5.1-codex-max",
         "copilot/gpt-5.2"

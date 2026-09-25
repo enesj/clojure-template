@@ -1,5 +1,5 @@
 /**
- * Optimized WarpGrep Configuration for Single-Tenant Template
+ * Optimized WarpGrep Configuration for clojure-template
  *
  * This configuration provides high-performance code search with project-specific
  * exclusions to reduce noise and improve relevance of search results.
