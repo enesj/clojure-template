@@ -95,3 +95,6 @@ config/*secrets*
 *.pem
 api-keys/
 secrets/
+
+# ZCode local workspace config (machine-specific paths; skills mirror .claude/skills/)
+.zcode/
