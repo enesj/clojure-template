@@ -1,0 +1,68 @@
+({:action :alter-column,
+  :field-name :email-ciphertext,
+  :model-name :admins,
+  :options {:null false, :type :text},
+  :changes {:null {:from :EMPTY, :to false}}}
+ {:action :alter-column,
+  :field-name :email-key-version,
+  :model-name :users,
+  :options {:null false, :type [:varchar 32]},
+  :changes {:null {:from :EMPTY, :to false}}}
+ {:action :alter-column,
+  :field-name :email-lookup-hash,
+  :model-name :tenant_invitations,
+  :options {:null false, :type [:varchar 64]},
+  :changes {:null {:from :EMPTY, :to false}}}
+ {:action :alter-column,
+  :field-name :email-ciphertext,
+  :model-name :tenant_invitations,
+  :options {:null false, :type :text},
+  :changes {:null {:from :EMPTY, :to false}}}
+ {:action :alter-column,
+  :field-name :email-lookup-hash,
+  :model-name :admin_invitations,
+  :options {:null false, :type [:varchar 64]},
+  :changes {:null {:from :EMPTY, :to false}}}
+ {:action :alter-column,
+  :field-name :email-lookup-hash,
+  :model-name :admins,
+  :options {:null false, :type [:varchar 64]},
+  :changes {:null {:from :EMPTY, :to false}}}
+ {:action :alter-column,
+  :field-name :email-key-version,
+  :model-name :admin_invitations,
+  :options {:null false, :type [:varchar 32]},
+  :changes {:null {:from :EMPTY, :to false}}}
+ {:action :alter-column,
+  :field-name :email-ciphertext,
+  :model-name :admin_invitations,
+  :options {:null false, :type :text},
+  :changes {:null {:from :EMPTY, :to false}}}
+ {:action :drop-column,
+  :field-name :email,
+  :model-name :tenant_invitations}
+ {:action :alter-column,
+  :field-name :email-key-version,
+  :model-name :tenant_invitations,
+  :options {:null false, :type [:varchar 32]},
+  :changes {:null {:from :EMPTY, :to false}}}
+ {:action :drop-column, :field-name :email, :model-name :users}
+ {:action :alter-column,
+  :field-name :email-key-version,
+  :model-name :admins,
+  :options {:null false, :type [:varchar 32]},
+  :changes {:null {:from :EMPTY, :to false}}}
+ {:action :alter-column,
+  :field-name :email-lookup-hash,
+  :model-name :users,
+  :options {:null false, :type [:varchar 64]},
+  :changes {:null {:from :EMPTY, :to false}}}
+ {:action :drop-column, :field-name :email, :model-name :admins}
+ {:action :alter-column,
+  :field-name :email-ciphertext,
+  :model-name :users,
+  :options {:null false, :type :text},
+  :changes {:null {:from :EMPTY, :to false}}}
+ {:action :drop-column,
+  :field-name :email,
+  :model-name :admin_invitations})

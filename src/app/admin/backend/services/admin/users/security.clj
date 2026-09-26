@@ -2,6 +2,7 @@
   "Password/reset/lockout helpers; enforce security rules."
   (:require
     [app.admin.backend.services.admin.audit :as audit]
+    [app.template.backend.security.email :as email-privacy]
     [honey.sql :as hsql]
     [java-time.api :as time]
     [next.jdbc :as jdbc]
@@ -40,9 +41,10 @@
   (jdbc/with-transaction [tx db]
     (jdbc/execute-one! tx ["SET LOCAL app.bypass_rls = true"])
     (let [user (jdbc/execute-one! tx
-                 (hsql/format {:select [:email :full_name]
+                 (hsql/format {:select [:email_ciphertext :email_lookup_hash :email_key_version :full_name]
                                :from [:users]
-                               :where [:= :id user-id]}))]
+                               :where [:= :id user-id]}))
+          user-email (email-privacy/resolve-email user)]
       (if user
         (do
           ;; In a real implementation, this would trigger password reset email
@@ -55,7 +57,7 @@
                                 :ip-address ip-address
                                 :user-agent user-agent})
           {:success true
-           :message (str "Password reset email sent to " (:email user))})
+           :message (str "Password reset email sent to " user-email)})
         {:error "User not found"}))))
 
 ;; ============================================================================

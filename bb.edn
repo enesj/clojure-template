@@ -393,10 +393,6 @@
          {:doc "Backfill/check expense/receipt privacy subject refs. Dry-run by default. Usage: bb privacy-subject-backfill [dev|test|prod] [--apply] [--cutover] [--check-complete] [--limit N] [--yes] [--pretty]",
           :task (apply shell {:extra-env (dotenv)} "clj" "-M" "scripts/bb/expenses/privacy_subject_backfill.clj" *command-line-args*)},
 
-         backfill-email-privacy
-         {:doc "Backfill email_lookup_hash/email_ciphertext from legacy plaintext emails. Dry-run by default. Usage: bb backfill-email-privacy [dev|test|prod] [--apply] [--check-complete] [--limit N] [--yes] [--pretty]",
-          :task (apply shell {:extra-env (dotenv)} "clj" "-M" "scripts/bb/database/backfill_email_privacy.clj" *command-line-args*)},
-
          backup-db
          {:doc "Create a backup of dev or test database. Usage: bb backup-db --dev or bb backup-db --test",
           :task (let [args *command-line-args*

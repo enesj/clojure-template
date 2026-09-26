@@ -59,7 +59,6 @@ See `scripts/bb/database/README.md`. ⚠️ Some scripts are destructive.
 
 | Script | Description |
 |---|---|
-| `backfill_email_privacy.clj` | Backfills `email_lookup_hash`/`email_ciphertext`/`email_key_version` from the legacy plaintext `email` column (`admins`, `users`, `admin_invitations`, `tenant_invitations`); dry-run by default; core logic in `app.template.backend.security.email-legacy-backfill`. |
 | `backup_db.clj` | Creates timestamped database backups. |
 | `clean_db.clj` | Completely drops and recreates the database (DANGER: destructive). |
 | `compare_db_schemas.clj` | Compares database schemas between environments. |
@@ -180,6 +179,8 @@ The following legacy scripts were removed from the repo, together with all refer
 | `bb/expenses/list_unmapped_article_aliases.clj`, `search_article_products.clj` | Superseded by the `bb/articles/` equivalents. |
 | `bb/expenses/receipt_ocr_extract_batches.clj`, `receipt_ocr_reparse_batch.clj` | Orphaned half of an OCR pipeline whose entry point (`receipt_ocr_worker.sh`) was already deleted. |
 | `sh/setup/create-new-app.sh` | Superseded by `bb create-new-app` (`project-management/create_new_app.clj`). |
+
+Removed later (2026-09-26): `bb/database/backfill_email_privacy.clj` and `app.template.backend.security.email-legacy-backfill` (plus the `bb backfill-email-privacy` task). The one-time email-privacy backfill completed on dev and test, and the legacy plaintext `email` columns were then dropped by migration `0080_schema.edn`, making the tool inapplicable (it queries the now-dropped plaintext column).
 
 Reference sites cleaned at the same time: the `receipt-ocr-worker` task in `bb.edn` (pointed at the already-deleted `receipt_ocr_worker.sh`), rows in `scripts/bb/articles/README.md`, the `create-new-app.sh` section in `scripts/sh/setup/README.md`, and the phase1-triage commands/table rows in `.github/prompts/create-articles-remote-db.prompt.md` (the backlog-save step there was kept, minus the triage pipeline).
 

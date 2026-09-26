@@ -211,7 +211,15 @@
       (handler-fn request)
       (catch Exception e
         (let [data (ex-data e)]
-          (if (= 400 (:status data))
+          (cond
+            (= :validation-error (:type data))
+            (do
+              (log/warn "Validation error:" data)
+              (json-response {:error (.getMessage e)
+                              :errors (:errors data)}
+                :status 400))
+
+            (= 400 (:status data))
             (do
               (log/warn "Validation error:" data)
               (json-response {:error (.getMessage e)
@@ -219,6 +227,8 @@
                               :allowed (:allowed data)
                               :value (:value data)}
                 :status 400))
+
+            :else
             (do
               (log/error e error-message)
               (error-response error-message :status 500))))))))
