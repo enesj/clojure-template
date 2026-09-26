@@ -480,17 +480,20 @@
           :task (apply shell "bb" "scripts/bb/project-management/md_to_pdf.clj" *command-line-args*)},
 
          clean-db
-         {:doc "Clean database by truncating all tables. Usage: bb clean-db --dev or bb clean-db --test",
+         {:doc "Clean (drop+recreate) or ensure (create-if-missing) a database. Usage: bb clean-db --dev [--ensure] or bb clean-db --test [--ensure]. Without --ensure this DROPS the database (interactive confirm); with --ensure it only creates when missing (safe).",
           :task (let [args *command-line-args*
                       env (cond
                             (some #{"--dev"} args) "dev"
                             (some #{"--test"} args) "test"
-                            :else nil)]
+                            :else nil)
+                      ensure? (some #{"--ensure"} args)]
                   (if env
-                    (shell {:extra-env (dotenv)} "clj" "-M" "scripts/bb/database/clean_db.clj" env)
-                    (do (println "Usage: bb clean-db --dev or bb clean-db --test")
-                      (println "  --dev   Clean development database")
-                      (println "  --test  Clean test database"))))},
+                    (apply shell {:extra-env (dotenv)} "clj" "-M" "scripts/bb/database/clean_db.clj"
+                      (cond-> [env] ensure? (conj "--ensure")))
+                    (do (println "Usage: bb clean-db --dev [--ensure] or bb clean-db --test [--ensure]")
+                      (println "  --dev        Drop and recreate dev database (destructive, asks confirm)")
+                      (println "  --test       Drop and recreate test database (destructive, asks confirm)")
+                      (println "  --ensure     Create the database only if missing (safe, non-destructive)"))))},
 
          delete-articles
          {:doc "Delete ALL articles (and cascades) from the database. Dry-run by default. Usage: bb delete-articles [--dev|--test|dev|test] [--apply] [--yes]",

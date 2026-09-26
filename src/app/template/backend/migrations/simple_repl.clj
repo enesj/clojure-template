@@ -264,6 +264,35 @@
 (def ^:private file-scoped-suppressed-schema-actions
   {"0062_schema.edn" deferred-email-cutover-actions})
 
+(def ^:private suppressed-sql-migrations
+  "SQL migration files that must become no-ops on fresh database replays.
+
+   The rewrites below are performed exclusively by
+   `sanitize-existing-schema-migrations!` (invoked on every `migrate!`) —
+   migration files under resources/db/migrations are never hand-edited.
+
+   0037 seeded a default admin with a legacy plaintext email row. After the
+   email-privacy cutover (0080 enforces NOT NULL on email_ciphertext), that
+   seed made every fresh database replay fail at 0080. The default admin is
+   now created through the application's own write path instead:
+   - dev: ensure-default-dev-admin! at app startup (admin@example.com / admin123)
+   - test/prod: bb seed-admin test|prod"
+  {"0037_seed_default_admin.sql"
+   (str/join "\n"
+     ["-- Formerly: seeded a default owner admin with a legacy plaintext email row."
+      "--"
+      "-- Suppressed via simple_repl/suppressed-sql-migrations as part of the"
+      "-- email-privacy cutover (migration 0080): this seed inserted a row with"
+      "-- plaintext email and NULL email_ciphertext, which made 0080's NOT NULL"
+      "-- enforcement fail on fresh database replays. The default admin is now"
+      "-- created through the application's own write path, which stores the"
+      "-- encrypted email triple:"
+      "--   - dev: ensure-default-dev-admin! at app startup (admin@example.com / admin123)"
+      "--   - test/prod: bb seed-admin test|prod"
+      "--"
+      "-- Kept as a numbered no-op so migration numbering stays stable across"
+      "-- environments where 0037 was already applied."])})
+
 (defn- schema-migration-files
   "Return the current generated schema migration files."
   []
@@ -279,23 +308,30 @@
 (defn- sanitize-schema-migration-file!
   [file {:keys [preserve-empty?]
          :or {preserve-empty? false}}]
-  (let [actions (edn/read-string (slurp file))
-        suppressed-actions (suppressed-schema-actions-for-file file)
-        sanitized-actions (remove suppressed-actions actions)
-        removed-count (- (count actions) (count sanitized-actions))]
-    (when (pos? removed-count)
-      (cond
-        (seq sanitized-actions)
-        (spit file (with-out-str (pprint/pprint sanitized-actions)))
+  (if-let [sql-no-op (get suppressed-sql-migrations (.getName ^java.io.File file))]
+    ;; Suppressed SQL migrations are rewritten to a comment-only no-op
+    ;; (idempotent: skip when the content already matches).
+    (when-not (= (str/trim (slurp file)) sql-no-op)
+      (spit file (str sql-no-op "\n"))
+      (println (format "Rewrote suppressed SQL migration %s to a no-op"
+                 (.getPath file))))
+    (let [actions (edn/read-string (slurp file))
+          suppressed-actions (suppressed-schema-actions-for-file file)
+          sanitized-actions (remove suppressed-actions actions)
+          removed-count (- (count actions) (count sanitized-actions))]
+      (when (pos? removed-count)
+        (cond
+          (seq sanitized-actions)
+          (spit file (with-out-str (pprint/pprint sanitized-actions)))
 
-        preserve-empty?
-        (spit file (with-out-str (pprint/pprint '())))
+          preserve-empty?
+          (spit file (with-out-str (pprint/pprint '())))
 
-        :else
-        (.delete file))
-      (println (format "Filtered %d suppressed schema action(s) from %s"
-                 removed-count
-                 (.getPath file))))))
+          :else
+          (.delete file))
+        (println (format "Filtered %d suppressed schema action(s) from %s"
+                   removed-count
+                   (.getPath file)))))))
 
 (defn- sanitize-schema-migration-files!
   [files opts]
@@ -308,6 +344,15 @@
   (sanitize-schema-migration-files! (remove before-files (schema-migration-files))
     {:preserve-empty? false}))
 
+(defn- suppressed-sql-migration-files
+  "Existing migration files registered in `suppressed-sql-migrations`.
+   Kept separate from `schema-migration-files` (EDN-only) so SQL files still
+   reach the sanitizer."
+  []
+  (->> (.listFiles (io/file resources-dir migrations-dir))
+    (filter #(contains? suppressed-sql-migrations (.getName ^java.io.File %)))
+    set))
+
 (defn- sanitize-existing-schema-migrations!
   "Rewrite known-bad generated schema migrations through the same suppression
    rules used for new generations. Existing historical files are preserved as
@@ -315,6 +360,8 @@
    stable across environments."
   []
   (sanitize-schema-migration-files! (schema-migration-files)
+    {:preserve-empty? true})
+  (sanitize-schema-migration-files! (suppressed-sql-migration-files)
     {:preserve-empty? true}))
 
 (defn make-schema-migration!

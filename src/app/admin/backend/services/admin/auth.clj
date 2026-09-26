@@ -8,6 +8,10 @@
     [honey.sql :as hsql]
     [java-time.api :as time]
     [next.jdbc :as jdbc]
+    ;; Extends next.jdbc SetParameter for java.time values (Instant etc.) so
+    ;; standalone entry points (bb seed-admin, scripts) that call this
+    ;; namespace without loading app core can still write timestamps.
+    [next.jdbc.date-time]
     [next.jdbc.result-set :as rs]
     [taoensso.timbre :as log])
   (:import

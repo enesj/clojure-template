@@ -101,6 +101,32 @@
             (println "Error:" (:err result)))
           (throw (Exception. "Database creation failed")))))))
 
+(defn database-exists? [db-config]
+  (let [superuser (psql-superuser db-config)
+        check-cmd ["/opt/homebrew/bin/psql"
+                   "-h" (:host db-config)
+                   "-p" (str (:port db-config))
+                   "-U" superuser
+                   "-d" "postgres"
+                   "-tA"
+                   "-c" (str "SELECT 1 FROM pg_database WHERE datname = '" (:dbname db-config) "';")]]
+    (= "1\n"
+      (let [result (apply sh-psql db-config check-cmd)]
+        (when (= 0 (:exit result))
+          (:out result))))))
+
+(defn ensure-database
+  "Non-destructive: create the database only when it does not exist yet.
+   Used by create-new-app so a freshly scaffolded project gets empty databases
+   without ever dropping anything."
+  [env]
+  (let [db-config (get-db-config (keyword env))]
+    (println (str "🔎 Checking " (str/upper-case env) " database: " (:dbname db-config)
+                  " on " (:host db-config) ":" (:port db-config)))
+    (if (database-exists? db-config)
+      (println (str "✅ Database " (:dbname db-config) " already exists — leaving it untouched"))
+      (create-database env db-config))))
+
 (defn clean-database [env]
   (let [db-config (get-db-config (keyword env))]
 
@@ -124,7 +150,13 @@
         (System/exit 1)))))
 
 (defn -main [& args]
-  (if (= 1 (count args))
+  (let [args (vec args)]
+    (cond
+      ;; Non-destructive ensure mode: create the DB only when missing.
+      (= args ["dev" "--ensure"]) (ensure-database "dev")
+      (= args ["test" "--ensure"]) (ensure-database "test")
+
+    (= 1 (count args))
     (let [[env] args]
       (if (#{"dev" "test"} env)
         (if (confirm-clean-database env)
@@ -138,16 +170,23 @@
           (println "❌ Database clean cancelled by user"))
         (do
           (println (str "❌ Invalid environment: " env))
-          (println "Usage: clj -M scripts/bb/database/clean_db.clj [dev|test]")
+          (println "Usage: clj -M scripts/bb/database/clean_db.clj [dev|test] [--ensure]")
           (System/exit 1))))
+
+    :else
     (do
-      (println "Usage: clj -M scripts/bb/database/clean_db.clj [dev|test]")
-      (println "⚠️  WARNING: This COMPLETELY DROPS and recreates the target database!")
+      (println "Usage: clj -M scripts/bb/database/clean_db.clj [dev|test] [--ensure]")
+      (println "⚠️  WARNING: Without --ensure this COMPLETELY DROPS and recreates the target database!")
       (println)
-      (println "  dev         Clean development database")
-      (println "  test        Clean test database")
+      (println "  dev         Clean development database (destructive)")
+      (println "  test        Clean test database (destructive)")
+      (println "  dev --ensure   Create development database only if missing (safe)")
+      (println "  test --ensure  Create test database only if missing (safe)")
       (println)
       (println "Examples:")
       (println "  clj -M scripts/bb/database/clean_db.clj dev")
       (println "  clj -M scripts/bb/database/clean_db.clj test")
-      (System/exit 1))))
+      (println "  clj -M scripts/bb/database/clean_db.clj dev --ensure")
+      (System/exit 1)))))
+
+(apply -main *command-line-args*)

@@ -1,16 +1,13 @@
--- Seed a default owner admin account for initial production login.
--- Password: AdminPass1  (change immediately after first login)
--- Hash algorithm: bcrypt+sha512, 12 iterations (buddy.hashers compatible)
+-- Formerly: seeded a default owner admin with a legacy plaintext email row.
 --
--- Idempotent: ON CONFLICT (email) DO NOTHING — safe to re-run.
-INSERT INTO public.admins (id, email, password_hash, full_name, role, status, created_at)
-VALUES (
-  gen_random_uuid(),
-  'admin@example.com',
-  'bcrypt+sha512$3220a91debd17627d43a6d84efc828d5$12$618b09d504a491d804a558957ef33e105bc839fd3c0fa8a3',
-  'System Administrator',
-  'owner'::admin_role,
-  'active'::admin_status,
-  NOW()
-)
-ON CONFLICT (email) DO NOTHING;
+-- Suppressed via simple_repl/suppressed-sql-migrations as part of the
+-- email-privacy cutover (migration 0080): this seed inserted a row with
+-- plaintext email and NULL email_ciphertext, which made 0080's NOT NULL
+-- enforcement fail on fresh database replays. The default admin is now
+-- created through the application's own write path, which stores the
+-- encrypted email triple:
+--   - dev: ensure-default-dev-admin! at app startup (admin@example.com / admin123)
+--   - test/prod: bb seed-admin test|prod
+--
+-- Kept as a numbered no-op so migration numbering stays stable across
+-- environments where 0037 was already applied.

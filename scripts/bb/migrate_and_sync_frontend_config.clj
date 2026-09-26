@@ -53,7 +53,9 @@
 
 (defn- run-cmd!
   [& cmd]
-  (let [result (process/shell {:out :inherit :err :inherit} cmd)]
+  ;; apply splats cmd into separate process arguments; passing the
+  ;; collection directly would stringify it into a single program name.
+  (let [result (apply process/shell {:out :inherit :err :inherit} cmd)]
     (when-not (zero? (:exit result))
       (die! (str "Command failed: " (str/join " " cmd)) (:exit result)))))
 

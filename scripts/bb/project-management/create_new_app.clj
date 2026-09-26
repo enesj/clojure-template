@@ -16,15 +16,22 @@
 (def config-manifest
   {:replacements
    [{:file "config/base.edn"
-     :type :edn
-     :updates [{:path [:database-name] :key :db-name}
-               {:path [:test-database-name] :key :test-db-name}]}
+     :type :text
+     ;; Order matters: the test name must be replaced first because it
+     ;; contains the dev name as a prefix. DB names are hardcoded in
+     ;; :dbname and the :jdbc-url strings, so a plain text rewrite is
+     ;; used instead of an EDN path update.
+     :patterns [{:pattern #"multi_tenant_pos_test"
+                 :replacement "{{test-db-name}}"}
+                {:pattern #"multi_tenant_pos"
+                 :replacement "{{db-name}}"}]}
     {:file "docker-compose.yml"
      :type :text
-     :patterns [{:pattern #"POSTGRES_DB: bookkeeping"
-                 :replacement "POSTGRES_DB: {{db-name}}"}
-                {:pattern #"POSTGRES_DB: bookkeeping-test"
-                 :replacement "POSTGRES_DB: {{test-db-name}}"}]}
+     ;; Test name first: it contains the dev name as a prefix.
+     :patterns [{:pattern #"multi_tenant_pos_test"
+                 :replacement "{{test-db-name}}"}
+                {:pattern #"multi_tenant_pos"
+                 :replacement "{{db-name}}"}]}
     {:file "package.json"
      :type :json
      :updates [{:path ["name"] :key :package-name}]}
@@ -32,10 +39,6 @@
      :type :text
      :patterns [{:pattern #"<title>.*?</title>"
                  :replacement "<title>{{title}}</title>"}]}
-    {:file ".secrets.edn"
-     :type :edn
-     :updates [{:path [:database-name] :key :db-name}
-               {:path [:test-database-name] :key :test-db-name}]}
     {:file "src/app/backend/db/init.clj"
      :type :text
      :patterns [{:pattern #"\"bookkeeping\""
@@ -128,12 +131,19 @@
                          "- PostgreSQL 12+\n"
                          "- Clojure CLI tools\n\n"
                          "### Database Setup\n"
-                         "1. Create databases:\n"
-                         "   ```sql\n"
-                         "   CREATE DATABASE " (:db-name config) ";\n"
-                         "   CREATE DATABASE " (:test-db-name config) ";\n"
-                         "   ```\n\n"
-                         "2. Update `.secrets.edn` with your database credentials\n\n"
+                         "Databases, migrations, and seed data are set up automatically during\n"
+                         "project creation (skip with `--skip-db-setup`). To run the same steps\n"
+                         "manually:\n"
+                         "```bash\n"
+                         "bb clean-db --dev --ensure      # create dev DB if missing (safe)\n"
+                         "bb clean-db --test --ensure     # create test DB if missing (safe)\n"
+                         "bb check-migrations dev         # applies pending migrations\n"
+                         "bb check-migrations test\n"
+                         "bb seed-admin test              # dev admin is auto-seeded on app start\n"
+                         "bb seed-categories dev && bb seed-categories test\n"
+                         "bb seed-geo-reference dev && bb seed-geo-reference test\n"
+                         "```\n"
+                         "Update `.secrets.edn` if your local PostgreSQL credentials differ.\n\n"
                          "### Development\n"
                          "```bash\n"
                          "# Install dependencies\n"
@@ -191,8 +201,8 @@
             (swap! validation-errors conj result)))))
 
     ;; Check directory structure
-    (let [required-dirs ["src/app/backend" "src/app/frontend" "src/app/shared"
-                         "resources/public" "cli-tools" "scripts" "test"]]
+    (let [required-dirs ["src/app/admin" "src/app/template" "src/app/domain" "src/app/shared"
+                         "src/app/frontend" "resources/public" "scripts" "test"]]
       (doseq [dir required-dirs]
         (let [dir-path (str target-dir "/" dir)]
           (if (fs/directory? dir-path)
@@ -211,10 +221,81 @@
           (println (str "\n❌ Project validation failed with " (count errors) " errors"))
           false)))))
 
+;; ============================================================================
+;; Database setup (runbook automation)
+;; ============================================================================
+
+(defn- run-in-project
+  "Run a command inside the generated project directory; print output live.
+   Returns true on exit code 0."
+  [target-dir & cmd]
+  (println "\n---" (str/join " " cmd) "---")
+  (let [proc (-> (ProcessBuilder. ^java.util.List (vec cmd))
+               (.directory (io/file target-dir))
+               (.redirectOutput java.lang.ProcessBuilder$Redirect/INHERIT)
+               (.redirectError java.lang.ProcessBuilder$Redirect/INHERIT)
+               .start)]
+    (= 0 (.waitFor proc))))
+
+(defn- secrets-present?
+  "The generated project's config/secrets.edn is copied from the template's
+   config/.secrets.edn. Without it, DB connections will fail with a missing
+   #ref resolution."
+  [target-dir]
+  (fs/exists? (str target-dir "/config/.secrets.edn")))
+
+(defn setup-databases
+  "Run the fresh-DB runbook inside the generated project:
+   ensure databases exist -> migrate dev+test -> seed admin/categories/geo.
+   Skipped with --skip-db-setup; also skipped (with instructions) when secrets
+   are missing."
+  [target-dir config]
+  (if (some #{"--skip-db-setup"} *command-line-args*)
+    (println "\n⏭️  Skipping database setup (--skip-db-setup)")
+    (if-not (secrets-present? target-dir)
+      (println "\n⏭️  Skipping database setup: config/.secrets.edn not found in the new project."
+               "\n   Fill it in, then run:"
+               "\n     bb clean-db --dev --ensure && bb clean-db --test --ensure"
+               "\n     bb migrate-and-sync-frontend-config   (or mig/migrate! via REPL for dev+test)"
+               "\n     bb seed-admin test && bb seed-categories dev && bb seed-categories test"
+               "\n     bb seed-geo-reference dev && bb seed-geo-reference test")
+      (let [steps [;; Ensure both databases exist (create-if-missing, never drops)
+                   ["bb" "clean-db" "--dev" "--ensure"]
+                   ["bb" "clean-db" "--test" "--ensure"]
+                   ;; Apply all migrations + bootstrap frontend configs (both envs)
+                   ["bb" "migrate-and-sync-frontend-config"]
+                   ["bb" "migrate-and-sync-frontend-config" "--profile" "test"]
+                   ;; Verify alignment
+                   ["bb" "check-migrations" "dev"]
+                   ["bb" "check-migrations" "test"]]
+            ;; Seed data: dev admin is auto-created by app bootstrap, so seed it
+            ;; explicitly only for test; categories and geo for both.
+            seed-steps [["bb" "seed-admin" "test"]
+                        ["bb" "seed-categories" "dev"]
+                        ["bb" "seed-categories" "test"]
+                        ["bb" "seed-geo-reference" "dev"]
+                        ["bb" "seed-geo-reference" "test"]]
+            all-steps (concat steps seed-steps)
+            failed (atom nil)]
+        (println "\n=== Setting up databases (dev + test) ===")
+        (doseq [cmd all-steps
+                :while (nil? @failed)]
+          (when-not (apply run-in-project target-dir cmd)
+            (reset! failed cmd)))
+        (if @failed
+          (do
+            (println "\n❌ Database setup failed at:" (str/join " " @failed))
+            (println "   Fix the issue inside" target-dir "and re-run the remaining runbook steps")
+            false)
+          (do
+            (println "\n✅ Databases ready: migrations applied and seed data loaded (dev + test)")
+            (println "   Dev admin (auto-seeded on first app start): admin@example.com / admin123")
+            true))))))
+
 (defn create-project [project-name config]
   (let [target-dir (or (:target-dir config) project-name)
         source-dir (System/getProperty "user.dir")
-        exclude-patterns [#"\.git" #"node_modules" #"target" #"tmp" #"\.cpcache" #"out" #"resources/public/assets/js" #"create[-_]new[-_]app" #"new-app-config\.edn"]]
+        exclude-patterns [#"\.git" #"node_modules" #"target" #"tmp" #"\.cpcache" #"out" #"resources/public/assets/js" #"create[-_]new[-_]app" #"new-app-config\.edn" #"backups" #"^\.env$" #"\.env$"]]
 
     (println "\n=== Creating new project:" project-name "===")
     (println "Configuration:")
@@ -252,12 +333,13 @@
     ;; Validate the generated project
     (validate-project target-dir)
 
+    ;; Ensure databases, apply migrations, and load seed data (dev + test)
+    (setup-databases target-dir config)
+
     (println "\n✨ Project created successfully at:" target-dir)
     (println "\nNext steps:")
     (println "  cd" target-dir)
     (println "  npm install")
-    (println "  # Update .secrets.edn with your database credentials")
-    (println "  # Run migrations via REPL (mig/migrate!)")
     (println "  ./scripts/run-app.sh")))
 
 (defn prompt-for-value [prompt current-value]
@@ -267,6 +349,7 @@
     (if (str/blank? input)
       current-value
       input)))
+
 
 (defn interactive-config [initial-config]
   (println "\n=== Interactive Configuration ===")
@@ -290,11 +373,21 @@
       (println "  --db-name <name>    Database name")
       (println "  --package-name <name> NPM package name")
       (println "  --target-dir <dir>  Target directory (default: project-name)")
+      (println "  --skip-db-setup     Skip database creation, migrations, and seeding")
       (System/exit 1))
 
     (let [project-name (first args)
-          ;; Parse command line arguments
-          parsed-args (apply hash-map (rest args))
+          ;; Parse command line arguments: "--flag value" pairs and
+          ;; standalone boolean flags like --skip-db-setup.
+          parsed-args (loop [as (rest args)
+                             m {}]
+                        (if (empty? as)
+                          m
+                          (let [a (first as)
+                                v (second as)]
+                            (if (and v (not (str/starts-with? v "--")))
+                              (recur (nnext as) (assoc m a v))
+                              (recur (rest as) (assoc m a true))))))
           config-file (get parsed-args "--config")
 
           ;; Build initial config
