@@ -129,20 +129,9 @@ bb railway-articles-run scripts/bb/articles/unmapped_aliases_counts.clj --pretty
 # Full backlog list
 bb railway-articles-run scripts/bb/articles/list_unmapped_aliases.clj --pretty
 
-# Save backlog for reference
+# Save full backlog for reference
 # IMPORTANT: use --limit 9999 — the default (200) silently truncates large backlogs
-mkdir -p tmp
-bb railway-articles-run scripts/bb/articles/list_unmapped_aliases.clj --limit 9999 --pretty | tee tmp/phase1-backlog.edn
-
-# Variant groups (required input for phase1_triage.clj)
-bb railway-articles-run scripts/bb/expenses/group_aliases_by_brand.clj --json | tee tmp/phase1-variant-groups.json
-
-# Phase-1 triage: reads tmp/phase1-backlog.edn + tmp/phase1-variant-groups.json
-# NOTE: pure local, no DB -- inputs must be pre-generated above
-bb scripts/bb/articles/phase1_triage.clj
-
-# Human-readable triage report (also pure local)
-bb scripts/bb/articles/phase1_triage_report.clj
+bb railway-articles-run scripts/bb/articles/list_unmapped_aliases.clj --limit 9999 --pretty
 ```
 
 Scan for:
@@ -487,6 +476,4 @@ Deletes all files under `tmp/`.
 | `map_aliases.clj` | `bb railway-articles-run scripts/bb/articles/map_aliases.clj --dry-run --pretty` | Batch alias mapping |
 | `delete_unmapped_aliases.clj` | `bb railway-articles-run scripts/bb/articles/delete_unmapped_aliases.clj --pretty` | Noise deletion (dry-run default) |
 | `group_aliases_by_brand.clj` | `bb railway-articles-run scripts/bb/expenses/group_aliases_by_brand.clj --json` | Variant risk detection |
-| `phase1_triage.clj` | `bb scripts/bb/articles/phase1_triage.clj` (local, no DB) | OCR noise triage |
-| `phase1_triage_report.clj` | `bb scripts/bb/articles/phase1_triage_report.clj` (local, no DB) | Triage markdown report |
 | `serper_search.clj` | `bb serper-search "query"` (local, no DB) | Optional targeted web research for ambiguous review cases |

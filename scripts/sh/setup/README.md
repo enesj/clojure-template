@@ -4,24 +4,6 @@ Scripts for initial project setup, configuration, and development environment pr
 
 ## Scripts
 
-### `create-new-app.sh`
-
-Creates a new application instance based on the hosting template with customizations.
-
-**Usage:**
-
-```bash
-./create-new-app.sh <project-name> [target-directory]
-```
-
-**Features:**
-
-- Copies the entire project template
-- Customizes project-specific configurations
-- Updates database names, HTML titles, and package.json
-- Initializes git repository
-- Supports configuration files for batch operations
-
 ### `install-clj-kondo-imports.sh`
 
 Downloads and installs community clj-kondo import configurations for popular Clojure libraries.
