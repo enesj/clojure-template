@@ -6,6 +6,7 @@
     [app.admin.backend.services.admin.auth :as admin-auth]
     [app.shared.type-conversion :as tc]
     [app.template.backend.migrations.simple-repl :as mig]
+    [clojure.string :as str]
     [honey.sql :as hsql]
     [next.jdbc :as jdbc]))
 
@@ -16,15 +17,40 @@
    :role "owner"
    :status "active"})
 
+(defn- prod-db-url
+  "The explicit production database URL, or nil. Never printed."
+  []
+  (or (not-empty (System/getenv "DATABASE_URL"))
+    (not-empty (System/getenv "DATABASE_PUBLIC_URL"))))
+
+(defn- describe-db-url
+  "Credential-free host:port/dbname description of a database URL."
+  [url]
+  (let [clean (str/replace url #"^[a-z]+://" "")]
+    (if-let [[_ _host-info host port db] (re-find #"^([^/@]+@)?([^:/]+)(?::(\d+))?/([^?]+)" clean)]
+      (str host ":" (or port "5432") "/" db)
+      "<redacted>")))
+
 (defn- db-target-description
   "Human-readable DB target for output; never includes credentials."
   [profile]
-  (let [{:keys [host port dbname]} (:database (aero/read-config "config/base.edn" {:profile profile}))]
-    (str host ":" port "/" dbname)))
+  (if (= :prod profile)
+    (describe-db-url (prod-db-url))
+    (let [{:keys [host port dbname]} (:database (aero/read-config "config/base.edn" {:profile profile}))]
+      (str host ":" port "/" dbname))))
 
 (defn- datasource-for-profile
   [profile]
   (jdbc/get-datasource {:jdbcUrl (mig/get-jdbc-url profile)}))
+
+(defn- confirm-prod!
+  [target]
+  (println "⚠️  This will create or reset the owner admin on the PRODUCTION database:")
+  (println (str "   " target))
+  (println)
+  (print "Type 'SEED ADMIN PROD' to confirm: ")
+  (flush)
+  (= "SEED ADMIN PROD" (some-> (read-line) str/trim)))
 
 (defn seed-admin!
   "Ensure the default admin exists with the documented dev password.
@@ -54,21 +80,40 @@
           {:action :created :id (:id (admin-auth/find-admin-by-email db email))}))))
 
 (defn -main [& args]
-  (let [env (or (first args) "dev")
-        profile (keyword env)]
-    (when-not (#{:dev :test} profile)
-      (println "❌ Invalid environment. Use: dev or test")
+  (let [[env & flags] args
+        profile (keyword (or env "dev"))
+        yes? (some #{"--yes"} flags)
+        admin (cond-> default-admin
+                (not-empty (System/getenv "ADMIN_EMAIL"))
+                (assoc :email (str/trim (System/getenv "ADMIN_EMAIL")))
+                (not-empty (System/getenv "ADMIN_PASSWORD"))
+                (assoc :password (System/getenv "ADMIN_PASSWORD")))]
+    (when-not (#{:dev :test :prod} profile)
+      (println "❌ Invalid environment. Use: dev, test, or prod")
+      (System/exit 1))
+    (when (and (= :prod profile) (not (prod-db-url)))
+      (println "❌ prod requires DATABASE_URL (or DATABASE_PUBLIC_URL) to be set — refusing to guess the target database")
+      (System/exit 1))
+    (when (and (= :prod profile) (= (:password default-admin) (:password admin)))
+      (println "❌ prod requires ADMIN_PASSWORD to be set (refusing to seed the default dev password into production)")
       (System/exit 1))
     (try
-      (let [db (datasource-for-profile profile)
-            {:keys [action id]} (seed-admin! db default-admin)]
-        (println (str "✅ Admin user " (name action) ":"))
-        (println "   Email:    " (:email default-admin))
-        (println "   Password:" (:password default-admin))
-        (println "   Role:     " (:role default-admin))
-        (println "   Status:   " (:status default-admin))
-        (println "   ID:       " id)
-        (println "   DB:       " (db-target-description profile)))
+      (let [target (db-target-description profile)]
+        (when (and (= :prod profile) (not yes?))
+          (when-not (confirm-prod! target)
+            (println "❌ Cancelled.")
+            (System/exit 1)))
+        (let [db (datasource-for-profile profile)
+              {:keys [action id]} (seed-admin! db admin)]
+          (println (str "✅ Admin user " (name action) ":"))
+          (println "   Email:    " (:email admin))
+          (println "   Password:" (if (= (:password default-admin) (:password admin))
+                                    (:password admin)
+                                    "(provided via ADMIN_PASSWORD)"))
+          (println "   Role:     " (:role admin))
+          (println "   Status:   " (:status admin))
+          (println "   ID:       " id)
+          (println "   DB:       " target)))
       (catch Exception e
         (println "❌ Failed to seed admin:" (.getMessage e))
         (System/exit 1)))))

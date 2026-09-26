@@ -596,7 +596,7 @@
                   (shell {:extra-env (dotenv)} "clj" "-M" "-e" (format "(do (require '[app.template.backend.migrations.alignment.report :as al]) (System/exit (al/exit-code-for-profile :%s)))" env)))},
 
          seed-admin
-         {:doc "Seed or refresh the admin user (default env: dev). Usage: bb seed-admin [dev|test]",
+         {:doc "Seed or refresh the admin user (default env: dev). prod requires DATABASE_URL + ADMIN_PASSWORD. Usage: bb seed-admin [dev|test|prod] [--yes]",
           :task (let [env (or (first *command-line-args*) "dev")]
                   (shell {:extra-env (dotenv)} "clj" "-M" "scripts/bb/database/seed_admin.clj" env))},
 

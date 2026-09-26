@@ -71,3 +71,36 @@
       (is (every? (comp empty? :unknown-entities) patches))
       (is (every? (comp not :has-changes?) patches))
       (is (every? empty? (map #(or (:remove-entities %) []) patches))))))
+
+(deftest plan-sync-does-not-add-internal-columns
+  (let [schema-index {:entities #{"admins" "users"}
+                      :entity->fields
+                      {"admins" {:raw ["id" "email" "email_ciphertext" "email_lookup_hash" "email_key_version" "password_hash" "full_name"]
+                                 :canonical #{"id" "email" "email-ciphertext" "email-lookup-hash" "email-key-version" "password-hash" "full-name"}}
+                       "users" {:raw ["id" "subject_ref" "created_by_subject_ref" "avatar_url" "full_name"]
+                                :canonical #{"id" "subject-ref" "created-by-subject-ref" "avatar-url" "full-name"}}}}
+        admin-bundle {:scope :admin
+                      :domain nil
+                      :paths {:table-columns "tmp/admin-table-columns.edn"}
+                      :data {:table-columns {:admins {:available-columns ["id" "full-name"]
+                                                      :default-visible-columns ["id" "full-name"]}}}}
+        domain-bundle {:scope :domain
+                       :domain "expenses"
+                       :paths {:table-columns "tmp/domain-table-columns.edn"}
+                       :data {:table-columns {:users {:available-columns ["id" "full-name"]
+                                                      :default-visible-columns ["id" "full-name"]}}}}
+        patches (sync/plan-sync [admin-bundle domain-bundle] schema-index nil)
+        table-patches (filter #(= :table-columns (:kind %)) patches)
+        added (into {}
+                (map (fn [p]
+                       [(:path p) (get-in p [:summary :admins :add-available]
+                                    (get-in p [:summary :users :add-available]))])
+                  table-patches))]
+    (testing "internal columns are never appended to available-columns"
+      (is (every? (comp not #(some #{"email-ciphertext" "email-lookup-hash" "email-key-version" "password-hash"} %))
+            (vals added)))
+      (is (every? (comp not #(some #{"subject-ref" "created-by-subject-ref"} %))
+            (vals added))))
+    (testing "regular columns are still proposed"
+      (is (some #(some #{"email"} %) (vals added)))
+      (is (some #(some #{"avatar_url"} %) (vals added))))))

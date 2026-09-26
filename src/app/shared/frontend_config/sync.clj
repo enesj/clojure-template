@@ -100,7 +100,8 @@
                 db-order (get-in schema-index [:entity->fields entity* :raw] [])
                 missing (->> db-order
                           (remove (fn [f]
-                                    (contains? available-normalized (discovery/normalize-field-id f))))
+                                    (or (contains? available-normalized (discovery/normalize-field-id f))
+                                      (schema/internal-field? f))))
                           vec)
                 available* (when (or (seq missing) available-present?)
                              (append-missing (get filtered :available-columns available)

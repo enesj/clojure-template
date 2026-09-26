@@ -1,6 +1,6 @@
 {:expense-items
  {:available-columns
-  ["expense_purchased_at" "article_canonical_name" "raw_label" "qty" "unit" "unit_price" "line_total" "created_at" "id" "tenant_id" "expense_id" "alias_id" "article_id" "updated_at"],
+  ["expense_purchased_at" "article_canonical_name" "raw_label" "qty" "unit" "unit_price" "line_total" "created_at" "id" "tenant_id" "expense_id" "alias_id" "article_id" "updated_at" "price_modified"],
   :default-visible-columns
   ["expense_purchased_at"
    "article_canonical_name"
@@ -48,12 +48,7 @@
    :alias_id {:label-key :common/alias-id}}},
  :suppliers
  {:available-columns
-  ["display_name"
-   "normalized_key"
-   "store_count"
-   "created_at"
-   "id"
-   "updated_at"],
+  ["display_name" "normalized_key" "store_count" "created_at" "id" "updated_at" "address"],
   :default-visible-columns
   ["display_name" "normalized_key" "store_count" "created_at"],
   :filterable-columns
@@ -76,7 +71,7 @@
    :updated_at {:label-key :common/updated-at}}},
  :subcategories
  {:available-columns
-  ["category_name" "name" "description" "is_active" "is_system_default" "created_at" "category_id" "updated_at" "id"],
+  ["category_name" "name" "description" "is_active" "is_system_default" "created_at" "category_id" "updated_at" "id" "tenant_id"],
   :default-visible-columns
   ["name" "category_name" "description" "is_active" "created_at"],
   :filterable-columns
@@ -184,7 +179,7 @@
    :created_at {:label-key :common/created-at}}},
  :expenses
  {:available-columns
-  ["purchased_at" "supplier_display_name" "store_display_name" "expense_category_name" "expense_context_name" "payer_label" "currency" "total_amount" "item_count" "notes" "id" "created_at" "updated_at" "tenant_id" "receipt_id" "store_id" "supplier_id" "payer_id" "expense_category_id" "expense_context_id"],
+  ["purchased_at" "supplier_display_name" "store_display_name" "expense_category_name" "expense_context_name" "payer_label" "currency" "total_amount" "item_count" "notes" "id" "created_at" "updated_at" "tenant_id" "receipt_id" "store_id" "supplier_id" "payer_id" "expense_category_id" "expense_context_id" "original_amount" "bam_amount" "exchange_rate" "rate_fetched_at"],
   :computed-fields
   {:supplier_display_name {:type "string", :label "Supplier"}
    :store_display_name {:type "string", :label "Store"}
@@ -285,7 +280,7 @@
    :id {:label-key :common/id}}},
  :payers
  {:available-columns
-  ["label" "is_default" "user_full_name" "user_email" "created_at" "updated_at" "id" "tenant_id"],
+  ["label" "is_default" "user_full_name" "user_email" "created_at" "updated_at" "id" "tenant_id" "type" "is_active"],
   :default-visible-columns ["label" "is_default" "user_full_name"],
   :filterable-columns ["label" "is_default" "user_full_name"],
   :sortable-columns ["label" "is_default" "user_full_name"],
@@ -352,7 +347,7 @@
    :id {:label-key :common/id}}},
  :receipts
  {:available-columns
-  ["status" "supplier-guess" "created-at" "updated-at" "id" "file-size" "raw-extract-json" "parsed-markdown" "total-amount-guess" "currency-guess" "purchased-at-guess" "error-message" "error-details" "retry-count" "expense-id" "payer-id" "storage-key" "file-hash" "content-type" "supplier-alias-id" "store-guess" "store-alias-id" "tenant-id"],
+  ["status" "supplier-guess" "created-at" "updated-at" "id" "file-size" "raw-extract-json" "parsed-markdown" "total-amount-guess" "currency-guess" "purchased-at-guess" "error-message" "error-details" "retry-count" "expense-id" "payer-id" "storage-key" "file-hash" "content-type" "supplier-alias-id" "store-guess" "store-alias-id" "tenant-id" "expense-category-id" "notes" "original-filename" "file-purged-at"],
   :default-visible-columns
   ["status"
    "supplier-guess"

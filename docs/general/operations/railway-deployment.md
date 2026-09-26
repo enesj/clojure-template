@@ -200,6 +200,25 @@ From the production nREPL you can:
 railway run bb seed-geo-reference prod
 ```
 
+### First Admin Account
+
+Fresh databases ship **without** an admin row: the old default-admin seed
+migration is a no-op since the email-privacy cutover (migration 0080 enforces
+`NOT NULL` on encrypted email columns that a SQL seed cannot compute). Create
+the first owner admin through the application's own write path, which stores
+the email encrypted at rest:
+
+```bash
+railway run bb seed-admin prod
+```
+
+- Requires `ADMIN_PASSWORD` to be set (the script refuses to seed the default
+  dev password into production) and asks for typed confirmation (`SEED ADMIN
+  PROD`); pass `--yes` to skip the prompt in automation.
+- Optional `ADMIN_EMAIL` overrides the default `admin@example.com`.
+- The seed is an upsert: re-running resets that admin's password. Change the
+  password after first login if it was shared over an insecure channel.
+
 ### Frontend Config Tasks Against Railway
 
 Use the Railway-aware Babashka tasks when you need to inspect or promote live frontend config from production:

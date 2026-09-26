@@ -1,6 +1,6 @@
 {:expense-items
  {:available-columns
-  ["expense_purchased_at" "article_canonical_name" "raw_label" "alias_id" "qty" "unit" "unit_price" "line_total" "article_id" "created_at" "expense_id" "id" "tenant_id" "updated_at"],
+  ["expense_purchased_at" "article_canonical_name" "raw_label" "alias_id" "qty" "unit" "unit_price" "line_total" "article_id" "created_at" "expense_id" "id" "tenant_id" "updated_at" "price_modified"],
   :default-visible-columns
   ["expense_purchased_at"
    "article_canonical_name"
@@ -38,12 +38,7 @@
   :column-config {:alias_id {:type "text"}, :article_id {:type "text"}, :expense_id {:type "text"}}},
  :suppliers
  {:available-columns
-  ["display_name"
-   "normalized_key"
-   "store_count"
-   "created_at"
-   "id"
-   "updated_at"],
+  ["display_name" "normalized_key" "store_count" "created_at" "id" "updated_at" "address"],
   :default-visible-columns
   ["display_name" "normalized_key" "store_count" "created_at"],
   :filterable-columns
@@ -152,7 +147,7 @@
    :unit {:label-key :common/unit}}},
  :expenses
  {:available-columns
-  ["purchased_at" "supplier_display_name" "payer_label" "currency" "total_amount" "item_count" "notes" "id" "receipt_id" "created_at" "updated_at" "supplier_id" "payer_id" "store_id" "tenant_id" "expense_category_id"],
+  ["purchased_at" "supplier_display_name" "payer_label" "currency" "total_amount" "item_count" "notes" "id" "receipt_id" "created_at" "updated_at" "supplier_id" "payer_id" "store_id" "tenant_id" "expense_category_id" "expense_context_id" "original_amount" "bam_amount" "exchange_rate" "rate_fetched_at"],
   :computed-fields
   {:supplier_display_name {:type "string", :label "Supplier"},
    :item_count {:label-key :common/items
@@ -197,7 +192,7 @@
   :always-visible ["display_name"]},
  :payers
  {:available-columns
-  ["label" "is_default" "created_at" "updated_at" "id" "tenant_id"],
+  ["label" "is_default" "created_at" "updated_at" "id" "tenant_id" "type" "is_active"],
   :default-visible-columns ["label" "is_default"],
   :filterable-columns ["label" "is_default"],
   :sortable-columns ["label" "is_default"],
@@ -297,7 +292,7 @@
    :error-message {:label "Error message"}}},
  :receipts
  {:available-columns
-  ["status" "supplier-guess" "created-at" "updated-at" "id" "file-size" "raw-extract-json" "parsed-markdown" "total-amount-guess" "currency-guess" "purchased-at-guess" "error-message" "error-details" "retry-count" "expense-id" "payer-id" "storage-key" "file-hash" "content-type" "supplier-alias-id" "store-guess" "store-alias-id" "tenant-id"],
+  ["status" "supplier-guess" "created-at" "updated-at" "id" "file-size" "raw-extract-json" "parsed-markdown" "total-amount-guess" "currency-guess" "purchased-at-guess" "error-message" "error-details" "retry-count" "expense-id" "payer-id" "storage-key" "file-hash" "content-type" "supplier-alias-id" "store-guess" "store-alias-id" "tenant-id" "expense-category-id" "notes" "original-filename" "file-purged-at"],
   :default-visible-columns
   ["status"
    "supplier-guess"
@@ -335,7 +330,7 @@
    :user-agent {:width "260px"}}},
  :article-aliases
  {:available-columns
-  ["supplier_display_name" "article_canonical_name" "raw_label" "raw_label_normalized" "unit" "created_at" "supplier_id" "article_id" "id" "updated_at"],
+  ["supplier_display_name" "article_canonical_name" "raw_label" "raw_label_normalized" "unit" "created_at" "supplier_id" "article_id" "id" "updated_at" "confidence"],
   :default-visible-columns
   ["supplier_display_name"
    "article_canonical_name"
@@ -493,7 +488,7 @@
 
  :subcategories
  {:available-columns
-  ["category_name" "name" "description" "created_at" "category_id" "updated_at" "id"],
+  ["category_name" "name" "description" "created_at" "category_id" "updated_at" "id" "tenant_id" "is_active" "is_system_default"],
   :default-visible-columns
   ["name" "category_name" "description" "created_at"],
   :filterable-columns
@@ -509,18 +504,7 @@
    :category_id {:label-key :common/category-id}}},
  :users
  {:available-columns
-  ["id"
-   "email"
-   "full-name"
-   "status"
-   "last-login-at"
-   "created-at"
-   "updated-at"
-   "email-verified"
-   "auth-provider"
-   "user-ref"
-   "email-masked"
-   "password-hash"],
+  ["id" "email" "full-name" "status" "last-login-at" "created-at" "updated-at" "email-verified" "auth-provider" "user-ref" "email-masked" "password-hash" "avatar-url"],
   :default-visible-columns
   ["email"
    "full-name"

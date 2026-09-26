@@ -6,6 +6,7 @@
   (:require
     [clojure.set :as set]
     [clojure.java.io :as io]
+    [clojure.string :as str]
     [app.shared.frontend-config.discovery :as discovery]))
 
 (defn- read-models-edn-or-empty
@@ -177,3 +178,24 @@
     (when include-computed? (get computed entity #{}))
     (get allowlist :* #{})
     (get allowlist entity #{})))
+
+(def ^:private internal-field-suffixes
+  "Canonical (dash-separated) suffixes marking storage-internal columns:
+   encrypted-email triple, privacy subject refs."
+  #{"-ciphertext" "-lookup-hash" "-key-version" "-subject-ref"})
+
+(def ^:private internal-field-names
+  #{"password-hash" "subject-ref"})
+
+(defn internal-field?
+  "True when a field name (raw snake_case or canonical) denotes an internal
+   column that must never be surfaced in frontend table-column configs:
+   the encrypted-email storage triple, privacy subject refs, and password
+   hashes. The sync uses this so newly added internal columns are not
+   appended to :available-columns."
+  [field]
+  (let [s (discovery/normalize-field-id field)]
+    (boolean
+      (and s
+        (or (contains? internal-field-names s)
+          (some #(str/ends-with? s %) internal-field-suffixes))))))
