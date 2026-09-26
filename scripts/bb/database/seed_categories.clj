@@ -19,7 +19,7 @@
   Notes:
   - Uses `categories.name` as the stable identifier (unique index).
   - This script is idempotent: it will insert missing rows and refresh descriptions.
-  - It also prunes categories not in this list.
+  - It also prunes categories not in this list, except `protected-categories`.
   - Before pruning, it remaps `subcategories.category_id` from legacy category names to the
     new consolidated names (so subcategories aren’t lost)."
   [;; Food (5)
@@ -76,6 +76,12 @@
    ["Services" "Ostalo"]
    ["Tobacco" "Ostalo"]])
 
+(def ^:const protected-categories
+  "Categories that are never pruned because the guided expense workflows
+   (utility/subscription power forms, tenant-managed subcategories) depend
+   on them by name. Seeded by migration 0078_seed_utilities_subscriptions_taxonomy."
+  #{"Utilities" "Subscriptions"})
+
 (defn get-db-config [profile]
   (if (= profile :prod)
     (let [url (or (System/getenv "DATABASE_PUBLIC_URL")
@@ -130,9 +136,10 @@
       subcategory-remaps)))
 
 (defn- prune-categories! [tx seed-names]
-  (let [placeholders (str/join ", " (repeat (count seed-names) "?"))
+  (let [keep-names (into seed-names protected-categories)
+        placeholders (str/join ", " (repeat (count keep-names) "?"))
         sql (str "delete from categories where name not in (" placeholders ")")]
-    (update-count (jdbc/execute-one! tx (into [sql] seed-names)))))
+    (update-count (jdbc/execute-one! tx (into [sql] keep-names)))))
 
 (defn seed-categories! [ds]
   (let [seed-names (mapv :name categories)]
@@ -161,8 +168,8 @@
             before (total-count ds)
             {:keys [remapped-subcategories pruned-categories]} (seed-categories! ds)
             after (total-count ds)]
-        (when-not (= after (count categories))
-          (throw (ex-info "Categories seed did not converge to the expected total" {:expected (count categories)
+        (when-not (= after (+ (count categories) (count protected-categories)))
+          (throw (ex-info "Categories seed did not converge to the expected total" {:expected (+ (count categories) (count protected-categories))
                                                                                     :actual after})))
         (println "✅ Categories ensured:")
         (println "   Seeded set:          " (count categories))
