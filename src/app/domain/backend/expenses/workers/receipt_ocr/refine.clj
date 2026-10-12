@@ -121,7 +121,12 @@
                 duration-ms (/ (- (System/nanoTime) started) 1000000.0)
                 refined-extraction (cond-> (:extraction refine)
                                      provider-confidence
-                                     (assoc :provider_confidence provider-confidence))]
+                                     (assoc :provider_confidence provider-confidence)
+
+                                     ;; The LLM often returns no merchant when the name is missing; keep the
+                                     ;; OCR store name/address so supplier can still be inferred from the address.
+                                     (seq (get-in extract-result [:extraction :merchant]))
+                                     (update :merchant #(merge (get-in extract-result [:extraction :merchant]) %)))]
             (log/info "Cerebras receipt refine applied"
               (cond-> {:receipt-id receipt-id
                        :subject-ref subject-ref

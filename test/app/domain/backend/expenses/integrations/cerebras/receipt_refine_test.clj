@@ -1,6 +1,7 @@
 (ns app.domain.backend.expenses.integrations.cerebras.receipt-refine-test
   (:require
     [app.domain.backend.expenses.integrations.cerebras.receipt-refine :as receipt-refine]
+    [clojure.string :as str]
     [clojure.test :refer [deftest is testing]]))
 
 (defn- schema-nodes
@@ -48,8 +49,8 @@
       (is (contains? (get props "purchased_at") "anyOf"))
       (is (contains? (get props "currency") "anyOf")))))
 
-(deftest build-chat-messages-adds-context-system-message
-  (testing "When context is provided, we add an extra system message"
+(deftest build-chat-messages-merges-context-into-single-system-message
+  (testing "When context is provided, it is appended to the one leading system message"
     (let [markdown "# receipt"
           ctx {:supplier_key "konzum"
                :supplier_name "Konzum"
@@ -58,11 +59,10 @@
                :store_address "Somewhere"
                :store_fingerprint "konzum/pj-66"}
           msgs (receipt-refine/build-chat-messages markdown ctx)]
-      (is (= 3 (count msgs)))
-      (is (= "system" (:role (nth msgs 0))))
-      (is (= "system" (:role (nth msgs 1))))
-      (is (= "user" (:role (nth msgs 2))))
-      (let [content (:content (nth msgs 1))]
+      (is (= 2 (count msgs)))
+      (is (= ["system" "user"] (map :role msgs)))
+      (let [content (:content (nth msgs 0))]
+        (is (str/starts-with? content receipt-refine/receipt-extraction-system-prompt))
         (is (re-find #"supplier_key: konzum" content))
         (is (re-find #"store_key: pj-66" content))
         (is (re-find #"store_fingerprint: konzum/pj-66" content))
@@ -78,7 +78,7 @@
             ctx {:supplier_key "konzum"
                  :store_key "pj-66"}
             msgs (receipt-refine/build-chat-messages markdown ctx)
-            content (:content (nth msgs 1))]
+            content (:content (nth msgs 0))]
         (is (re-find #"Format hints" content))
         (is (re-find #"Items table starts" content))
         (is (re-find #"Currency is usually" content))))))

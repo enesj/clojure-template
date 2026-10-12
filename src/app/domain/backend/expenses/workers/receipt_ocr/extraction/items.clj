@@ -14,7 +14,7 @@
   #"(?iuU)\b(pdv|vat|porez|osnovica|stopa|(?:osn|csn)\.?|pou|пдв|порез|основица|стопа)\b")
 
 (def payment-label-pattern
-  #"(?iuU)\b(gotovina|kartica|visa|mastercard|diners|amex|american|paypal|готовина|картица|виза|мастеркард|динерс|амекс)\b")
+  #"(?iuU)\b(gotovina|kartica|visa|mastercard|diners|amex|american\s+express|paypal|готовина|картица|виза|мастеркард|динерс|амекс)\b")
 
 (def meta-label-pattern
   #"(?iu)\b(ra[čc]un|fiskalni|kasa|kasir|operator|datum|vrijeme|broj|id)\b")

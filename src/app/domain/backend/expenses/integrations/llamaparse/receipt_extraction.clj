@@ -21,6 +21,13 @@
   (when (and a b)
     (double (.abs (.subtract (bigdec a) (bigdec b))))))
 
+(defn- items-match-total?
+  [items total]
+  (let [items-sum (totals/items-total items)]
+    (boolean
+      (and items-sum total
+        (<= (abs-decimal-diff items-sum total) confidence-diff-threshold)))))
+
 (defn- average
   [xs]
   (when (seq xs)
@@ -198,15 +205,33 @@
         merchant (merchant/text->merchant-context header text-content)
         table-items (table-items/response->table-items resp-json)
         {:keys [items total-lines]} (table-items/parse-table-items table-items)
-        items (if (empty? items)
+        picked-candidate (some-> resp-json response->total-candidates totals/pick-best-total-candidate)
+        text-candidates (fn []
+                          (->> [structured-markdown-items
+                                (text-items/parse-text-items structured-text)
+                                (text-items/parse-text-items text-content)
+                                (text-items/parse-text-items combined)]
+                            (remove empty?)))
+        items (cond
+                (empty? items)
                 (or structured-markdown-items
                   (text-items/parse-text-items structured-text)
                   (text-items/parse-text-items text-content)
                   (text-items/parse-text-items combined)
                   [])
+
+                ;; A partial table (e.g. only the last rows of the receipt) is replaced by a
+                ;; text parse whose items add up to the printed total.
+                (and (:amount picked-candidate)
+                  (not (items-match-total? items (:amount picked-candidate))))
+                (or (->> (text-candidates)
+                      (filter #(items-match-total? % (:amount picked-candidate)))
+                      first)
+                  items)
+
+                :else
                 items)
         total-lines* (concat (when combined (str/split-lines combined)) total-lines)
-        picked-candidate (some-> resp-json response->total-candidates totals/pick-best-total-candidate)
         items-total (totals/items-total items)
         items-table-confidence (response->items-table-confidence resp-json)
         line-total-reliability (items->line-total-reliability items)

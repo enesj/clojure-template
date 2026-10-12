@@ -241,8 +241,10 @@
 (defn build-chat-messages
   "Build the OpenAI-style messages payload for receipt extraction.
 
-  When `context` is provided, we add an additional system message with supplier/store
-  fingerprint context and optional format hints.
+  When `context` is provided, supplier/store fingerprint context and optional format
+  hints are appended to the single system message. Only one system message is sent
+  because some OpenAI-compatible chat templates (e.g. Qwen) reject a system message
+  that is not the first message.
 
   Context is a map that may contain:
   {:supplier_key .. :supplier_name .. :store_key .. :store_display_name .. :store_address ..}
@@ -251,13 +253,11 @@
   ([markdown]
    (build-chat-messages markdown nil))
   ([markdown context]
-   (let [ctx-msg (context-system-message context)]
-     (cond-> [{:role "system" :content receipt-extraction-system-prompt}]
-       (seq ctx-msg)
-       (conj {:role "system" :content ctx-msg})
-
-       true
-       (conj {:role "user" :content (receipt-extraction-user-prompt markdown)})))))
+   (let [ctx-msg (context-system-message context)
+         system-content (cond-> receipt-extraction-system-prompt
+                          (seq ctx-msg) (str "\n\n" ctx-msg))]
+     [{:role "system" :content system-content}
+      {:role "user" :content (receipt-extraction-user-prompt markdown)}])))
 
 (defn normalize-llm-extraction
   "Normalize a parsed JSON extraction map by trimming strings and dropping empty values.

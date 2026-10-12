@@ -47,6 +47,21 @@
     (and (string? label)
       (re-matches #"(?iu)^\d[\d,\.]*x(?:\s+\d[\d,\.]*)?$" (str/trim label)))))
 
+(defn- barcode-label?
+  "True for a label that is only a product barcode/code, e.g. '69 60936564905'."
+  [label]
+  (boolean
+    (and (string? label)
+      (re-matches #"\d{1,4}\s\d{8,}|\d{8,}" (str/trim label)))))
+
+(defn- wrapped-label-tail?
+  "True when a label line ends in a dimension token (e.g. '220x125x300mm', '550x'),
+  which marks a product name wrapped onto the next receipt line."
+  [label]
+  (boolean
+    (and (string? label)
+      (re-find #"(?iu)(?:\d[x×]\d[\p{L}\d.,]*|\d(?:mm|cm)|[x×])$" (str/trim label)))))
+
 (defn- line->text-item
   [line]
   (let [line (some-> line text/safe-trim)
@@ -58,7 +73,7 @@
             (not (address-noise-line? line))
             (not (merchant/store-line? line))
             (not (merchant/separator-noise? line)))
-      (when-let [[_ label price-str] (re-matches #"(?iu)^(.+?)\s+(\d{1,9}[\.,]\d{2})\s*(?:[A-Z])?\s*(?:e|km|bam|€)?$" line)]
+      (when-let [[_ label price-str] (re-matches #"(?iu)^(.+?)\s+(\d{1,9}[\.,]\d{2})\s*(?:[A-KM-Z])?\s*(?:e|km|bam|€)?$" line)]
         (let [label (table-items/normalize-item-label label)
               price (common/parse-money price-str)
               embedded (when label (embedded-qty label))
@@ -70,7 +85,8 @@
                            (.divide (bigdec price) (bigdec qty) 4 RoundingMode/HALF_UP))]
           (when (and label
                   price
-                  (re-find #"\p{L}" label)
+                  (or (re-find #"\p{L}" label)
+                    (barcode-label? label))
                   (not (qty-price-fragment-label? label))
                   (not (table-items/summary-label? (text/normalize-text label))))
             {:raw_label label
@@ -86,21 +102,6 @@
   (when-let [line (text/safe-trim line)]
     (when-let [[_ amount] (re-matches money-only-line-re line)]
       (common/parse-money amount))))
-
-(defn- text-item-label-line?
-  [line]
-  (let [line (some-> line text/safe-trim)
-        norm (text/normalize-text line)]
-    (boolean
-      (and line norm
-        (re-find #"\p{L}" line)
-        (not (table-items/summary-label? norm))
-        (not (re-matches text/ba-datetime-line-re line))
-        (not (re-matches text/ba-date-line-re line))
-        (not (address-noise-line? line))
-        (not (merchant/store-line? line))
-        (not (merchant/separator-noise? line))
-        (nil? (totals/line->total-candidate line))))))
 
 (defn- line->qty-unit-total
   [line]
@@ -144,6 +145,56 @@
                                          2
                                          RoundingMode/HALF_UP))})))))
           (range (count tokens)))))))
+
+(defn- line->price-qty-total
+  "Parses a column-layout line `15,00 1,000 15,00` (unit price, qty, line total).
+  The price x qty = total check keeps it from matching unrelated amount lines."
+  [line]
+  (when-let [[_ p q t] (some->> line
+                         text/safe-trim
+                         (re-matches #"(?u)^(\d{1,9}[.,]\d{2})\s+(\d{1,6}(?:[.,]\d{1,3})?)\s+(\d{1,9}[.,]\d{2})$"))]
+    (let [price (common/parse-money p)
+          qty (common/parse-money q)
+          total (common/parse-money t)]
+      (when (and price qty total
+              (pos? (.signum (bigdec qty)))
+              (<= (.abs (.subtract (.multiply (bigdec price) (bigdec qty)) (bigdec total)))
+                0.02M))
+        {:qty qty
+         :unit_price price
+         :line_total total}))))
+
+(defn- text-item-label-line?
+  "True when `line` can be an item label.
+
+  A line that looks like address noise (e.g. a 5-digit product code such as
+  '27150 Amisu Dzemper' matches the postal-code pattern) is still accepted when
+  the next line is a quantity/price line like '1,000x 9,95 9,95E'."
+  [line next-line]
+  (let [line (some-> line text/safe-trim)
+        norm (text/normalize-text line)]
+    (boolean
+      (and line norm
+        (re-find #"\p{L}" line)
+        (not (table-items/summary-label? norm))
+        (not (re-matches text/ba-datetime-line-re line))
+        (not (re-matches text/ba-date-line-re line))
+        (or (not (address-noise-line? line))
+          (some? (line->qty-unit-total next-line)))
+        (not (merchant/store-line? line))
+        (not (merchant/separator-noise? line))
+        (nil? (totals/line->total-candidate line))))))
+
+(def ^:private negative-pct-only-line-re
+  #"(?iu)^-\d[\d,\.]*\s*%\s*:?$")
+
+(defn- code-like-continuation?
+  "True for a wrapped label tail made only of short codes (e.g. '2 5 2b3c')."
+  [label]
+  (boolean
+    (and (string? label)
+      (re-find #"\d" label)
+      (not (re-find #"\p{L}{3,}" label)))))
 
 (defn- line->qty-only
   [line]
@@ -194,7 +245,8 @@
                 (nil? raw-label)
                 (assoc inline-item :raw_label pending)
 
-                (not (continuation-label? raw-label))
+                (not (or (continuation-label? raw-label)
+                       (wrapped-label-tail? pending)))
                 inline-item
 
                 (str/includes? (str/lower-case pending) (str/lower-case raw-label))
@@ -216,11 +268,26 @@
                 inline-item (when inline-item0
                               (combine-labels pending-label inline-item0))
                 amount-only (line->money-only line)
-                qty-line (line->qty-unit-total line)
+                qty-line (or (line->qty-unit-total line)
+                           (line->price-qty-total line))
                 qty-only (line->qty-only line)
                 unit-and-total (line->unit-and-total line)
-                pending-label (some-> pending-label table-items/normalize-item-label text/safe-trim)]
+                pending-label (some-> pending-label table-items/normalize-item-label text/safe-trim)
+                split-discount (when (and (seq items)
+                                       (re-matches negative-pct-only-line-re line)
+                                       (line->money-only (second remaining)))
+                                 (table-items/discount-row
+                                   [(str (str/replace line #"\s*:\s*$" "") ": " (second remaining))]))
+                discount (when (seq items)
+                           (or split-discount
+                             (table-items/discount-row [line])))]
             (cond
+              discount
+              (recur (if split-discount (nnext remaining) (rest remaining))
+                pending-label
+                pending-qty
+                (conj (pop items) (table-items/apply-discount (peek items) discount)))
+
               inline-item
               (recur (rest remaining) nil nil (conj items inline-item))
 
@@ -274,12 +341,22 @@
                                :unit_price unit-price
                                :line_total line-total})))
 
-              (text-item-label-line? line)
+              (text-item-label-line? line (second remaining))
               (let [label (some-> line table-items/normalize-item-label text/safe-trim)
-                    label-norm (text/normalize-text label)]
+                    label-norm (text/normalize-text label)
+                    continuation? (and pending-label
+                                    label
+                                    (code-like-continuation? label)
+                                    (some? (line->money-only (second remaining))))]
                 (recur (rest remaining)
-                  (if (and label (re-find #"\p{L}" label) (not (table-items/summary-label? label-norm)))
+                  (cond
+                    continuation?
+                    (str pending-label " " label)
+
+                    (and label (re-find #"\p{L}" label) (not (table-items/summary-label? label-norm)))
                     label
+
+                    :else
                     pending-label)
                   nil
                   items))

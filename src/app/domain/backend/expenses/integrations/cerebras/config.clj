@@ -7,7 +7,7 @@
     [clojure.string :as str]))
 
 (def ^:private default-base-url "https://api.cerebras.ai/v1")
-(def ^:private default-model "zai-glm-4.7")
+(def ^:private default-model "qwen-3.8-27b")
 (def ^:private default-conn-timeout-ms 5000)
 (def ^:private default-socket-timeout-ms 60000)
 (def ^:private default-max-retries 2)
@@ -26,7 +26,7 @@
 
   - `CEREBRAS_API_KEY`
   - `CEREBRAS_BASE_URL` (default https://api.cerebras.ai/v1)
-  - `CEREBRAS_MODEL` (default zai-glm-4.7)
+  - `CEREBRAS_MODEL` (default qwen-3.8-27b)
   - `CEREBRAS_CONN_TIMEOUT_MS` (default 5000)
   - `CEREBRAS_SOCKET_TIMEOUT_MS` (default 60000)
   - `CEREBRAS_REFINE_CONCURRENCY` (default 5)

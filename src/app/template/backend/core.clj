@@ -3,6 +3,7 @@
   (:require
     [aero.core :as aero]
     [app.admin.backend.services.admin.auth :as admin-auth]
+    [app.domain.backend.registry :as domain-registry]
     [app.template.backend.routes.admin.settings-bootstrap :as settings-bootstrap]
     [app.template.backend.security.email :as email-privacy]
     [app.template.backend.webserver :as webserver]
@@ -351,7 +352,10 @@
                                         (let [p (-> @config :webserver :port)]
                                           (cond-> p (string? p) Integer/parseInt))
                                         database
-                                        @service-container)]
+                                        @service-container)
+                    domain-workers    (if (= :test profile)
+                                        (reify java.io.Closeable (close [_]))
+                                        (domain-registry/start-workers! database @config))]
           (log/info "🚀 Starting system - host:" (-> @config :webserver :host) ", port:" (-> @config :webserver :port) "- Auto-restart works!")
           (json-config/init!)
           (do-with-state {:config            @config

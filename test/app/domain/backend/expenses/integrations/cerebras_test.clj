@@ -10,7 +10,7 @@
 		(let [captured (atom nil)
 					cfg {:api-key "test-key"
 							 :base-url "https://example.invalid/v1"
-							 :model "zai-glm-4.7"
+							 :model "qwen-3.8-27b"
 							 :conn-timeout-ms 1
 							 :socket-timeout-ms 1
 							 :max-retries 0
@@ -28,7 +28,7 @@
 											{:status 200
 											 :body (json/generate-string
 															 {:id "chatcmpl-test"
-																:model "zai-glm-4.7"
+																:model "qwen-3.8-27b"
 																:choices [{:index 0
 																					 :finish_reason "stop"
 																					 :message {:role "assistant"
@@ -41,7 +41,7 @@
 	(testing "Some providers return JSON in message.reasoning (without message.content); we still parse it"
 		(let [cfg {:api-key "test-key"
 					 :base-url "https://example.invalid/v1"
-					 :model "zai-glm-4.7"
+					 :model "qwen-3.8-27b"
 					 :conn-timeout-ms 1
 					 :socket-timeout-ms 1
 					 :max-retries 0
@@ -59,7 +59,7 @@
 									{:status 200
 									 :body (json/generate-string
 												 {:id "chatcmpl-test"
-													:model "zai-glm-4.7"
+													:model "qwen-3.8-27b"
 													:choices [{:index 0
 																 :finish_reason "length"
 																 :message {:role "assistant"

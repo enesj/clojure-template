@@ -183,7 +183,7 @@
  ;; - Receipt refinement is controlled per-user via the Expenses Settings toggle.
  ;; - The Cerebras integration is considered available when a Cerebras API key is present.
  :cerebras  {:base-url           "https://api.cerebras.ai/v1"
-             :model              "zai-glm-4.7"
+             :model              "qwen-3.8-27b"
              :refine-concurrency 5
              :refine-timeout-ms  60000
              ;; Prevent structured-output truncation (e.g. finish_reason=length)

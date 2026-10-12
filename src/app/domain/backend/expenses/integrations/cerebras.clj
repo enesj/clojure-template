@@ -41,7 +41,7 @@
   "Call Cerebras to refine OCR markdown into a structured receipt extraction.
 
   Optional opts:
-  - :context (map) store/supplier fingerprint context to include as an extra system
+  - :context (map) store/supplier fingerprint context, appended to the system message
     message in the prompt.
 
   Returns:

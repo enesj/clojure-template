@@ -3,7 +3,9 @@
   (:require
     [app.domain.backend.expenses.routes.core :as expenses-admin-routes]
     [app.domain.backend.expenses.routes.user-api :as expenses-user-api-routes]
-    [app.domain.shared.routes.expenses-user :as expenses-user-route-contract]))
+    [app.domain.backend.expenses.workers.receipt-ocr.recovery :as receipt-ocr-recovery]
+    [app.domain.shared.routes.expenses-user :as expenses-user-route-contract]
+    [taoensso.timbre :as log]))
 
 (def ^:private expenses-manifest
   {:id :expenses
@@ -12,6 +14,11 @@
                  (expenses-admin-routes/routes db (:config service-container)))
     :user-api (fn [db wrap-user-auth app-config]
                 (expenses-user-api-routes/routes db wrap-user-auth app-config))}
+
+   ;; Background workers: (fn [db app-config]) -> java.io.Closeable
+   :workers
+   {:receipt-ocr-recovery (fn [db app-config]
+                            (receipt-ocr-recovery/start! db app-config))}
 
    :ui-config
    {:user {:root-dir "src/app/domain/frontend/expenses/config"
@@ -59,6 +66,27 @@
           (when-let [route-fn (get-in manifest [:routes :user-api])]
             (route-fn db wrap-user-auth app-config)))
     enabled-domains))
+
+(defn start-workers!
+  "Start background workers declared by enabled domains.
+   Returns a java.io.Closeable that stops them all. A worker that fails to start
+   is logged and skipped so it cannot block system startup."
+  [db app-config]
+  (let [started (into []
+                  (comp (mapcat (fn [manifest] (:workers manifest)))
+                    (keep (fn [[worker-id start-fn]]
+                            (try
+                              (start-fn db app-config)
+                              (catch Exception e
+                                (log/error e "Domain worker failed to start" {:worker worker-id}))))))
+                  enabled-domains)]
+    (reify java.io.Closeable
+      (close [_]
+        (doseq [^java.io.Closeable w started]
+          (try
+            (.close w)
+            (catch Exception e
+              (log/warn e "Domain worker failed to stop"))))))))
 
 (defn get-ui-config-paths
   "Get the UI config paths for all enabled domains.

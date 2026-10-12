@@ -5,13 +5,28 @@
     [clojure.string :as str]))
 
 (def total-preferred-prefixes
-  ["total" "ukupan iznos" "ukupna" "ukupan" "za uplatu" "za plac" "za pla" "uplaceno" "primljeno"])
+  ["total" "ukupan iznos" "ukupna" "ukupan" "za uplatu" "za plac" "za pla" "uplaceno" "primljeno"
+   "укупан износ" "укупна" "укупан" "за уплату" "уплаћено" "примљено"])
+
+;; Tendered amounts can differ from the printed total (cash rounding), so they only
+;; win when no real total line exists.
+(def total-tendered-prefixes
+  ["uplaceno" "primljeno" "уплаћено" "примљено"])
 
 (def total-fallback-prefixes
   ["ukupno" "укупно" "gotovina" "kartica" "saldo"])
 
 (def total-exclude-substrings
   ["bez porez" "без порез" "porez" "порез" "pdv" "пдв" "vat" "tax"])
+
+(defn- first-of-multiple-amounts
+  "When a line carries several whole-token amounts (e.g. 'TOTAL: 10,87 10.87'),
+  return the first one; parse-money would otherwise glue the digits together."
+  [line]
+  (let [amounts (->> (str/split (or line "") #"\s+")
+                  (filter #(re-matches #"-?\d{1,9}(?:[.,]\d{3})*[.,]\d{2}" %)))]
+    (when (>= (count amounts) 2)
+      (first amounts))))
 
 (defn line->total-candidate
   ([line]
@@ -23,11 +38,12 @@
                 (and norm (some #(str/starts-with? norm %) total-preferred-prefixes)) :preferred
                 (and norm (some #(str/starts-with? norm %) total-fallback-prefixes)) :fallback
                 :else nil)
-         amount (common/parse-money line)]
+         amount (common/parse-money (or (first-of-multiple-amounts line) line))]
      (when (and kind amount norm
              (not (some #(str/includes? norm %) total-exclude-substrings)))
        (merge {:kind kind
-               :amount (bigdec amount)}
+               :amount (bigdec amount)
+               :tendered? (boolean (some #(str/starts-with? norm %) total-tendered-prefixes))}
          attrs)))))
 
 (defn pick-best-total-candidate
@@ -44,7 +60,9 @@
                                  (zero? (.compareTo (bigdec (:amount row)) (bigdec amount))))
                            row))
                    (reverse rows))))
-        preferred (filterv #(= :preferred (:kind %)) candidates)]
+        preferred (filterv #(= :preferred (:kind %)) candidates)
+        preferred (let [primary (vec (remove :tendered? preferred))]
+                    (if (seq primary) primary preferred))]
     (when (seq candidates)
       (pick (if (seq preferred) preferred candidates)))))
 

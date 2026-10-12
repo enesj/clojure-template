@@ -14,7 +14,7 @@
     [app.domain.backend.expenses.workers.receipt-ocr.refine :as refine]
     [app.domain.backend.expenses.workers.receipt-ocr.runner :as runner]
     [clojure.string :as str]
-    [clojure.test :refer [deftest is]])
+    [clojure.test :refer [deftest is testing]])
   (:import
     [java.util.concurrent CountDownLatch TimeUnit]))
 
@@ -223,6 +223,38 @@
             :selected_total_confidence 0.41}
           (get-in res [:extraction :provider_confidence])))
     (is (= "test-model" (get-in res [:llm_refine :model])))))
+
+(deftest maybe-refine-with-cerebras-keeps-ocr-merchant-address-when-llm-has-no-merchant
+  (let [receipt-id (java.util.UUID/randomUUID)
+        ocr-merchant {:store_name "Podružnica Sarajevo 1"
+                      :address "ul. Put života bb, 71000 SARAJEVO"
+                      :raw_address "Podružnica Sarajevo 1, ul. Put života bb, 71000 SARAJEVO"}
+        extract-result {:parsed-markdown "TOTAL: 1,00"
+                        :raw {}
+                        :extraction {:merchant ocr-merchant
+                                     :items [{:raw_label "A" :qty 1.0 :unit_price 1.00 :line_total 1.00}]
+                                     :totals {:total 1.00}}}
+        refine! (fn [llm-extraction]
+                  (clojure.core/with-redefs-fn
+                    {#'cerebras/refine-receipt-markdown!
+                     (fn [_cfg _markdown]
+                       {:model "test-model" :extraction llm-extraction})
+                     #'receipt-queries/get-receipt-refine-context
+                     (fn [_db _rid] nil)}
+                    (fn []
+                      (#'refine/maybe-refine-with-cerebras
+                       ::db
+                       {:id receipt-id :subject_ref "s" :original_filename "IMG_4046.jpeg"}
+                       extract-result
+                       {:cerebras-cfg {:api-key "k"} :force-refine? true}))))
+        items [{:raw_label "A" :qty 1.0 :unit_price 1.00 :line_total 1.00}]]
+    (testing "LLM returned no merchant"
+      (is (= ocr-merchant
+            (get-in (refine! {:items items :totals {:total 1.00}}) [:extraction :merchant]))))
+    (testing "LLM merchant name is merged over the OCR address fields"
+      (is (= (assoc ocr-merchant :name "Kid zone")
+            (get-in (refine! {:merchant {:name "Kid zone"} :items items :totals {:total 1.00}})
+              [:extraction :merchant]))))))
 
 (deftest maybe-refine-with-cerebras-appends-raw-ocr-table-on-small-total-mismatch
   (let [receipt-id (java.util.UUID/randomUUID)

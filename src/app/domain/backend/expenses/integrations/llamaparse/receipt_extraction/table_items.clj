@@ -20,25 +20,28 @@
         (every? (comp nil? text/safe-trim) rest*)))))
 
 (def summary-prefixes
-  ["ve" "osn" "pdv" "пдв" "vat" "tax" "porez" "порез"
-   "jib" "pib" "ibfm" "bf" "uplac" "upl" "gotovina" "kartica" "povrat" "ukupno" "укупно" "total"
+  ["ve" "vm" "osn" "pdv" "пдв" "vat" "tax" "porez" "порез"
+   "jib" "pib" "ibfm" "bf" "uplac" "upl" "gotovina" "kartica" "cek" "ček" "povrat" "ukupno" "укупно" "total"
+   "ukupan" "укупан" "platna kartica" "платна картица" "готовина" "картица"
+   "примљено" "razlika za povrat" "разлика за поврат"
    "popust" "pupust" "rabat" "discount" "akcija" "snizenje" "sniženje"])
+
+(def ^:private whole-word-summary-prefixes
+  #{"ve" "vm" "osn" "cek" "ček"})
 
 (defn summary-label?
   [label]
   (let [label (text/normalize-text label)
-        label* (some-> label (str/replace #"^[^\p{L}\p{N}]+" "") text/safe-trim)]
+        label* (some-> label
+                 (str/replace #"^[^\p{L}\p{N}]+" "")
+                 ;; tax-rate rows start with the rate marker, e.g. "E PDV 17%"
+                 (str/replace #"(?iu)^\p{L}\s+(?=(?:pdv|пдв|vat|tax|porez|порез)(?![\p{L}\p{N}]))" "")
+                 text/safe-trim)]
     (boolean
       (and label*
         (some (fn [prefix]
-                (cond
-                  (= prefix "ve")
-                  (boolean (re-find #"(?iu)^ve\b" label*))
-
-                  (= prefix "osn")
-                  (boolean (re-find #"(?iu)^osn\b" label*))
-
-                  :else
+                (if (contains? whole-word-summary-prefixes prefix)
+                  (boolean (re-find (re-pattern (str "(?iu)^" prefix "(?![\\p{L}\\p{N}])")) label*))
                   (str/starts-with? label* prefix)))
           summary-prefixes)))))
 
@@ -111,7 +114,9 @@
   (when (and a b)
     (double (.abs (.subtract (bigdec a) (bigdec b))))))
 
-(defn- apply-discount
+(defn apply-discount
+  "Apply a parsed discount `{:pct .. :amount ..}` to `item`, returning the item
+  with the discounted :line_total (and :unit_price when :qty is known)."
   [{:keys [line_total qty] :as item} {:keys [pct amount]}]
   (let [base (common/parse-money line_total)
         pct* (common/parse-money pct)
@@ -169,7 +174,9 @@
               {:pct pct
                :amount amount})))))))
 
-(defn- discount-row
+(defn discount-row
+  "Return {:pct .. :amount ..} when `cells` describe a discount row (e.g.
+  '-50,00%: 5,00'), otherwise nil."
   [cells]
   (let [cells* (->> cells (map text/safe-trim) (remove nil?) vec)
         norms (map text/normalize-text cells*)
@@ -198,8 +205,9 @@
                       (->> cells*
                         reverse
                         (remove #(= % pct-cell))))
-        amount (or (when amount-cell (common/parse-money amount-cell))
-                 (:amount embedded))
+        amount (if embedded
+                 (:amount embedded)
+                 (when amount-cell (common/parse-money amount-cell)))
         label-norm (first norms)
         ignore-summary? (and label-norm (summary-label? label-norm) (not discount-label?))
         negative-pct? (boolean (and pct-cell (re-find #"-\d" pct-cell)))
@@ -357,12 +365,23 @@
           (str/includes? b* a*) b
           :else (str a " " b))))))
 
+(defn- tax-table?
+  "True for the tax breakdown table (`Oznaka | Naziv | Stopa | Porez`), whose rows are not items."
+  [rows]
+  (let [tokens (some->> (first rows)
+                 (#(when (sequential? %) %))
+                 (mapcat #(str/split (or (text/normalize-text (str %)) "") #"[^\p{L}\p{N}]+"))
+                 set)]
+    (boolean
+      (and (some #{"stopa" "стопа"} tokens)
+        (some #{"porez" "порез"} tokens)))))
+
 (defn parse-table-items
   [table-items]
   (reduce
     (fn [acc table]
       (let [rows (table-item->rows table)]
-        (if-not (sequential? rows)
+        (if (or (not (sequential? rows)) (tax-table? rows))
           acc
           (loop [remaining rows
                  mapping {:label-idx 0 :qty-idx nil :unit-idx nil :total-idx 1}

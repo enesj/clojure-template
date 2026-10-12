@@ -39,6 +39,15 @@
               :line_total 1.00}]
     (is (= :metadata (non-item-reason ctx item)))))
 
+(deftest non-item-reason-keeps-american-product-but-drops-american-express
+  (let [non-item-reason #'extraction/non-item-reason
+        ctx {:items-count 6
+             :grand-total 19.76M}]
+    (is (nil? (non-item-reason ctx {:raw_label "KEKS COKOLADA I LJESNJAK AMERICAN 135G"
+                                    :qty 1 :unit_price 1.50 :line_total 1.50})))
+    (is (= :payment (non-item-reason ctx {:raw_label "American Express"
+                                          :qty 1 :unit_price 19.76 :line_total 19.76})))))
+
 (deftest persist-extract-result-filters-cyrillic-summary-rows-from-items
   (let [receipt-id (java.util.UUID/randomUUID)
         mapped-supplier-id (java.util.UUID/randomUUID)

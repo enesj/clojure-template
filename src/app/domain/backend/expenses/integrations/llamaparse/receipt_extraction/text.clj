@@ -12,7 +12,7 @@
   (some-> s safe-trim str/lower-case (str/replace #"\s+" " ") str/trim not-empty))
 
 (def ba-datetime-line-re
-  #"(?iu)^(\d{1,2})\.(\d{1,2})\.(\d{2,4})\.?\s+(\d{1,2}):(\d{2})(?::(\d{2}))?$")
+  #"(?iu)^(\d{1,2})\.(\d{1,2})\.(\d{2,4})\.?\s*(\d{1,2}):(\d{2})(?::(\d{2}))?$")
 
 (def ba-date-line-re
   #"(?iu)^(\d{1,2})\.(\d{1,2})\.(\d{2,4})\.?$")
@@ -124,23 +124,43 @@
       (str/join "\n\n")
       not-empty)))
 
+(def ^:private heading-qty-line-re
+  #"(?iu)^(?:#+\s*)?(\d[\d,\.]*\s*x\s+\d[\d,\.]*(?:\s+\d[\d,\.]*)?\s*[A-Z]?)$")
+
+(defn- heading-qty-line
+  "Return the quantity/price line of a heading block such as
+  '## 1,000x 10,45 10,45E' (OCR sometimes marks item lines as headings)."
+  [item]
+  (when (= "heading" (some-> (:type item) str/lower-case))
+    (some->> (or (safe-trim (:value item)) (safe-trim (:md item)))
+      (re-matches heading-qty-line-re)
+      second)))
+
 (defn- response->structured-block-text
-  [resp-json allowed-types]
-  (->> (response->all-items resp-json)
-    (filter (fn [{:keys [type]}]
-              (contains? allowed-types (some-> type str/lower-case))))
-    (keep (fn [item]
-            (sanitize-header-item-text
-              (or (safe-trim (:value item))
-                (safe-trim (:md item))))))
-    (remove str/blank?)
-    distinct
-    (str/join "\n\n")
-    not-empty))
+  "Join the text of structured blocks of `allowed-types`.
+
+  Blocks are intentionally not de-duplicated: a receipt can list the same
+  product on two identical rows, and dropping the repeat understates the items.
+  With `include-heading-qty-lines?`, heading blocks that are really quantity
+  lines are included with the markdown heading marker removed."
+  ([resp-json allowed-types]
+   (response->structured-block-text resp-json allowed-types false))
+  ([resp-json allowed-types include-heading-qty-lines?]
+   (->> (response->all-items resp-json)
+     (keep (fn [{:keys [type] :as item}]
+             (if (contains? allowed-types (some-> type str/lower-case))
+               (sanitize-header-item-text
+                 (or (safe-trim (:value item))
+                   (safe-trim (:md item))))
+               (when include-heading-qty-lines?
+                 (heading-qty-line item)))))
+     (remove str/blank?)
+     (str/join "\n\n")
+     not-empty)))
 
 (defn response->structured-text
   [resp-json]
-  (response->structured-block-text resp-json #{"text"}))
+  (response->structured-block-text resp-json #{"text"} true))
 
 (defn response->structured-code-text
   [resp-json]
