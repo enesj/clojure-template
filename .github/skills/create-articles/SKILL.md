@@ -1,10 +1,8 @@
 ---
+name: create-articles
 description: "Map OCR article aliases using batch local heuristics plus Perplexity research, review, create_articles, map_aliases, and dedicated manufacturers handoff"
-agent: "agent"
-metadata:
-  tags: ["articles", "aliases", "taxonomy", "ocr", "perplexity", "babashka"]
+disable-model-invocation: true
 ---
-
 # create-articles
 
 Map raw `article_aliases` (where `article_id IS NULL`) to canonical `articles` using

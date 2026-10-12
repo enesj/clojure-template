@@ -1,10 +1,8 @@
 ---
+name: create-articles-remote-db
 description: "Map OCR article aliases on Railway prod DB using batch research, review, create_articles, map_aliases, and dedicated manufacturers handoff"
-agent: "agent"
-metadata:
-  tags: ["articles", "aliases", "taxonomy", "ocr", "serper", "babashka", "railway", "prod"]
+disable-model-invocation: true
 ---
-
 # create-articles-remote-db
 
 Map raw `article_aliases` (where `article_id IS NULL`) to canonical `articles` on the

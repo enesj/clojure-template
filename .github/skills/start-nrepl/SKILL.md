@@ -1,8 +1,8 @@
 ---
+name: start-nrepl
 description: "Start or reuse an nREPL server for this project so code can be evaluated through nREPL"
-agent: "agent"
+disable-model-invocation: true
 ---
-
 # Start an nREPL server
 
 Start (or reuse) an nREPL server for this project so you can evaluate code with `clj-nrepl-eval`.

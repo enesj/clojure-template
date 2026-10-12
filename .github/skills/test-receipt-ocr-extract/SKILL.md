@@ -1,8 +1,8 @@
 ---
+name: test-receipt-ocr-extract
 description: "Run the receipt OCR extraction fine-tuning workflow used in the March 2026 regression session: focused tests, batch reparses, scratch-pad tracking, reruns after parser changes, and final markdown reporting"
-agent: "agent"
+disable-model-invocation: true
 ---
-
 Use the receipt OCR extraction fine-tuning workflow we used in the March 2026 session.
 
 Treat the active user prompt as the scope definition, but default to this workflow unless the user explicitly narrows it.

@@ -31,18 +31,5 @@
         "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
       }
     },
-    "morph-mcp": {
-      "type": "stdio",
-      "command": "/bin/sh",
-      "args": [
-        "-c",
-        "repo_root=\"$(git rev-parse --show-toplevel 2>/dev/null || pwd)\"; set -a; [ -f \"$repo_root/.env\" ] && . \"$repo_root/.env\"; set +a; if [ -z \"$MORPH_API_KEY\" ]; then echo \"morph-mcp: MORPH_API_KEY is missing. Add it to $repo_root/.env (or export it in your environment). Docs: https://docs.morphllm.com/mcpquickstart\" 1>&2; exit 1; fi; exec /Users/enes/.nvm/versions/node/v22.17.0/bin/npx -y @morphllm/morphmcp"
-      ],
-      "env": {
-        "PATH": "/Users/enes/.nvm/versions/node/v22.17.0/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin",
-        "WARPGREP_EXCLUDES": ".git,node_modules,target,.shadow-cljs,.clj-kondo,.cpcache,dist,build,out,.next,.idea,.vscode,.DS_Store,npm-debug.log*,yarn-debug.log*,yarn-error.log*",
-        "ENABLED_TOOLS": "edit_file,warpgrep_codebase_search"
-      }
-    }
   }
 }

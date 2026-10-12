@@ -1,10 +1,8 @@
 ---
+name: manufacturers-remote-db
 description: "Discover potential manufacturer names from article canonical_names, create new manufacturers, and wire articles on Railway prod DB"
-agent: "agent"
-metadata:
-  tags: ["manufacturers", "articles", "taxonomy", "data-quality", "railway", "prod"]
+disable-model-invocation: true
 ---
-
 # manufacturers-remote-db (Railway production)
 
 Analyze articles without a `manufacturer_id`, extract potential brand/manufacturer names

@@ -1,10 +1,8 @@
 ---
+name: manufacturers
 description: "Discover potential manufacturer names from article canonical_names, create new manufacturers, and wire articles on the dev database"
-agent: "agent"
-metadata:
-  tags: ["manufacturers", "articles", "taxonomy", "data-quality", "dev"]
+disable-model-invocation: true
 ---
-
 # manufacturers (dev)
 
 Analyze articles without a `manufacturer_id`, extract potential brand/manufacturer names
