@@ -223,6 +223,7 @@
    :show-highlights? {:type :boolean :required false}
    :measured-table-height {:type :number :required false}
    :measured-table-width {:type :number :required false}
+   :actions-column-width {:type :string :required false}
    :pagination {:type :any :required false}})
 
 (def sticky-thead-props
@@ -238,7 +239,7 @@
 (defui table
   {:prop-types table-props}
   [{:keys [headers rows row-key render-row render-row-expansion editing entity-name entity-spec measured-table-height measured-table-width _display-settings _page-display-settings
-           per-page on-per-page-change rows-per-page-options extra-settings-toggles]
+           per-page on-per-page-change rows-per-page-options extra-settings-toggles actions-column-width]
     :as props}]
   (let [t (use-t)
         header-cells (ensure-seq headers)
@@ -274,7 +275,7 @@
                                       ;; Select column gets fixed width
                                       (= idx 0) "50px"
                                       ;; Actions column gets more width for circular buttons
-                                      (= idx (- header-count 1)) "150px"
+                                      (= idx (- header-count 1)) (or actions-column-width "150px")
                                       ;; All other columns are dynamically sized
                                       :else nil))
                                   header-cells)))

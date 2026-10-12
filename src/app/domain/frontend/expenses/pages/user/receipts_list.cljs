@@ -5,8 +5,7 @@
     [app.domain.frontend.expenses.components.user-expense-form :refer [user-expense-add-form-modal]]
 
     [app.template.frontend.components.button :refer [button]]
-    [app.template.frontend.components.dropdown.action :as dropdown]
-    [app.template.frontend.components.icons :refer [check-circle]]
+    [app.template.frontend.components.icons :refer [check-circle document-text-icon]]
     [app.template.frontend.components.list :refer [list-view]]
     [app.template.frontend.components.list.cells :as list-cells]
     [app.template.frontend.events.list.ui-state :as list-ui-state-events]
@@ -141,26 +140,6 @@
       (not (receipt-refine-pending? receipt))
       (contains? #{"extracted" "review_required"} status))))
 
-(defn- receipt-actions
-  [t can-ocr? receipt]
-  (let [receipt-id (id-utils/extract-entity-id receipt)
-        ocr-allowed? (receipt-ocr-allowed? receipt)
-        action-groups (cond-> []
-                        (and can-ocr? ocr-allowed?)
-                        (conj {:group-title (t :receipts/ocr-group)
-                               :items [{:id "parse-ocr"
-                                        :icon "🔍"
-                                        :label (t :receipts/parse-ocr-label)
-                                        :tooltip (t :receipts/ocr-tooltip)
-                                        :on-click (fn [e]
-                                                    (.stopPropagation e)
-                                                    (rf/dispatch [:user-expenses/ocr-receipt receipt-id]))}]}))]
-    (when (seq action-groups)
-      ($ dropdown/action-dropdown
-        {:entity-id receipt-id
-         :actions action-groups
-         :position :portal}))))
-
 (defn- render-receipt-actions
   [t can-ocr? action-loading? open-receipt-detail! receipt]
   ($ :div {:class "flex items-center gap-2"}
@@ -193,7 +172,23 @@
                                (when (and can-ocr? (not action-loading?))
                                  (rf/dispatch [:user-expenses/post-selected [receipt-id]])))}
           ($ check-circle))))
-    (receipt-actions t can-ocr? receipt)))
+    (when (receipt-ocr-allowed? receipt)
+      (let [receipt-id (id-utils/extract-entity-id receipt)]
+        ($ button {:id (str "btn-parse-receipt-" receipt-id)
+                   :type "button"
+                   :btn-type :info
+                   :shape "circle"
+                   :title (if can-ocr?
+                            (t :receipts/ocr-tooltip)
+                            (t :receipts/tooltip-no-ocr))
+                   :aria-label (t :receipts/parse-ocr-label)
+                   :disabled (or (not can-ocr?) action-loading?)
+                   :on-click (fn [e]
+                               (.stopPropagation e)
+                               (.preventDefault e)
+                               (when (and can-ocr? (not action-loading?))
+                                 (rf/dispatch [:user-expenses/ocr-receipt receipt-id])))}
+          ($ document-text-icon))))))
 
 (defn- receipt-purged?
   [receipt]
@@ -472,5 +467,7 @@
 
                    :render-actions (fn [receipt]
                                      (render-receipt-actions t can-ocr? action-loading? open-receipt-detail-from-edit! receipt))
+                   ;; Four circular action controls need ~184px plus cell padding; the default 150px would clip Parse.
+                   :actions-column-width "12.5rem"
                    :on-add-click #(rf/dispatch [:navigate-to "/expenses/upload"])}))))))
       ($ receipt-detail-modal))))

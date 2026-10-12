@@ -197,6 +197,7 @@
                        :measured-table-height measured-table-height
                        :measured-table-width measured-table-width
                        :show-highlights? show-highlights?
+                       :actions-column-width (:actions-column-width props)
                        :render-row render-row-fn
                        :render-row-expansion (:render-row-expansion props)
                        :display-settings merged-display-settings
