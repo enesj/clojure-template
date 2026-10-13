@@ -17,7 +17,6 @@ Find the root cause quickly, using evidence (not guesses).
 
 ## Tool choices (use specialized skills)
 - Frontend state/auth/UI → `app-db-inspect`
-- Docs vs code / architecture alignment → `doc-alignment-audit`
 - Frontend event/perf flow → `reframe-events-analysis`
 - Build/runtime/logs (FE or BE) → `system-logs`
 

@@ -65,31 +65,31 @@ test('malformed or unexpected payloads read as no decision rather than throwing'
 test('spending less needs the high bar; the same confidence is enough to spend more', () => {
   // 0.51 sits between the two bars: too low to downgrade, high enough to upgrade.
   const down = readDecision(gatewayAnswer('fast', { fast: 0.51, balanced: 0.4, deep: 0.09 }))
-  expect(route(down, on('claude-sonnet-5'), config).model).toBeNull()
+  expect(route(down, on('claude-sonnet-5-5'), config).model).toBeNull()
 
   const up = readDecision(gatewayAnswer('deep', { deep: 0.51, balanced: 0.4, fast: 0.09 }))
-  expect(route(up, on('claude-sonnet-5'), config).model).toBe('opus')
+  expect(route(up, on('claude-sonnet-5-5'), config).model).toBe('opus')
 })
 
 test('both directions are available once the bar is cleared', () => {
   const down = readDecision(gatewayAnswer('fast', { fast: 0.95, balanced: 0.04, deep: 0.01 }))
-  expect(route(down, on('claude-opus-5'), config).model).toBe('haiku')
+  expect(route(down, on('claude-opus-5-5'), config).model).toBe('haiku')
 
   const up = readDecision(gatewayAnswer('deep', { deep: 0.9, balanced: 0.08, fast: 0.02 }))
-  expect(route(up, on('claude-haiku-4-5-20251001'), config).model).toBe('opus')
+  expect(route(up, on('claude-haiku-5-5'), config).model).toBe('opus')
 })
 
 test('effort moves in both directions too, on its own confidence', () => {
   const low = readDecision(gatewayAnswer('fast', { fast: 0.95 }, 0.01, 0.1))
-  expect(route(low, on('claude-haiku-4-5-20251001', 'high'), config).effort).toBe('low')
+  expect(route(low, on('claude-haiku-5-5', 'high'), config).effort).toBe('low')
 
   const high = readDecision(gatewayAnswer('deep', { deep: 0.95 }, 0.01, 2.8))
-  expect(route(high, on('claude-opus-5', 'low'), config).effort).toBe('xhigh')
+  expect(route(high, on('claude-opus-5-5', 'low'), config).effort).toBe('xhigh')
 })
 
 test('a numeric effort is the caller\'s own scale and is left alone', () => {
   const decision = readDecision(gatewayAnswer('deep', { deep: 0.95 }, 0.01, 2.8))
-  expect(route(decision, { model: 'claude-opus-5', effort: 4000 }, config).effort).toBeNull()
+  expect(route(decision, { model: 'claude-opus-5-5', effort: 4000 }, config).effort).toBeNull()
 })
 
 test('the rubric score maps onto the reasoning ladder', () => {
@@ -103,14 +103,14 @@ test('the rubric score maps onto the reasoning ladder', () => {
 
 test('a risky task takes the deep tier and real reasoning, past both thresholds', () => {
   const decision = readDecision(gatewayAnswer('fast', { fast: 0.97, balanced: 0.02, deep: 0.01 }, 0.93))
-  const routing = route(decision, on('claude-sonnet-5', 'low'), config)
+  const routing = route(decision, on('claude-sonnet-5-5', 'low'), config)
   expect(routing.model).toBe('opus')
   expect(routing.effort).toBe('high')
   expect(routing.reason).toContain('risk')
 })
 
 test('no decision, and a decision that changes nothing, both leave the request as it is', () => {
-  expect(route(null, on('claude-sonnet-5'), config).model).toBeNull()
+  expect(route(null, on('claude-sonnet-5-5'), config).model).toBeNull()
   const same = readDecision(gatewayAnswer('balanced', { balanced: 0.9 }, 0.01, 1.4))
   const routing = route(same, on('sonnet', 'medium'), config)
   expect(routing.model).toBeNull()
@@ -122,10 +122,10 @@ test('without a confidence a change may only go up, never down', () => {
   const noDistribution = readDecision(
     JSON.stringify({ answers: { tier: { type: 'choice', choice: 'fast' } } }),
   )
-  expect(route(noDistribution, on('claude-opus-5'), config).model).toBeNull()
+  expect(route(noDistribution, on('claude-opus-5-5'), config).model).toBeNull()
 
   const up = readDecision(JSON.stringify({ answers: { tier: { type: 'choice', choice: 'deep' } } }))
-  expect(route(up, on('claude-haiku-4-5-20251001'), config).model).toBe('opus')
+  expect(route(up, on('claude-haiku-5-5'), config).model).toBe('opus')
 })
 
 test('an unrecognised model id is treated as an upgrade, not guessed at', () => {
@@ -182,12 +182,12 @@ test('a TypeSafe answer is read from its own confidence and noul fields', () => 
 })
 
 test('a low-confidence TypeSafe downgrade is refused, like the Gateway path', () => {
-  expect(route(readDecision(typesafeAnswer('fast', 0.42)), on('claude-sonnet-5'), config).model).toBeNull()
+  expect(route(readDecision(typesafeAnswer('fast', 0.42)), on('claude-sonnet-5-5'), config).model).toBeNull()
 })
 
 test('a risky TypeSafe answer forces the deep tier through the noul field', () => {
   const decision = readDecision(typesafeAnswer('fast', 0.98, 0.88))
-  expect(route(decision, on('claude-sonnet-5'), config).model).toBe('opus')
+  expect(route(decision, on('claude-sonnet-5-5'), config).model).toBe('opus')
 })
 
 test('each backend gets its own endpoint, question type and model placement', () => {
@@ -230,10 +230,10 @@ test('risk raises the effort floor but never lowers one', () => {
   const decision = readDecision(gatewayAnswer('fast', { fast: 0.99 }, 0.95, 0))
   // Forcing skips the thresholds, so without a clamp this would pull xhigh
   // down to high with no confidence check at all.
-  expect(route(decision, on('claude-opus-5', 'xhigh'), config).effort).toBeNull()
-  expect(route(decision, on('claude-opus-5', 'max'), config).effort).toBeNull()
+  expect(route(decision, on('claude-opus-5-5', 'xhigh'), config).effort).toBeNull()
+  expect(route(decision, on('claude-opus-5-5', 'max'), config).effort).toBeNull()
   // It still raises a session that is below the floor.
-  expect(route(decision, on('claude-opus-5', 'low'), config).effort).toBe('high')
+  expect(route(decision, on('claude-opus-5-5', 'low'), config).effort).toBe('high')
 })
 
 test('max ranks above every rung the rubric can produce', () => {
@@ -241,10 +241,10 @@ test('max ranks above every rung the rubric can produce', () => {
   // Leaving max is a downgrade, so it needs the high bar, not the lenient one.
   const decision = readDecision(gatewayAnswer('fast', { fast: 0.9 }, 0.01, 0))
   const barelyConfident = { ...(decision as NonNullable<typeof decision>), effortConfidence: 0.35 }
-  expect(route(barelyConfident, on('claude-sonnet-5', 'max'), config).effort).toBeNull()
+  expect(route(barelyConfident, on('claude-sonnet-5-5', 'max'), config).effort).toBeNull()
 
   const sure = { ...(decision as NonNullable<typeof decision>), effortConfidence: 0.8 }
-  expect(route(sure, on('claude-sonnet-5', 'max'), config).effort).toBe('low')
+  expect(route(sure, on('claude-sonnet-5-5', 'max'), config).effort).toBe('low')
 })
 
 // A prompt classified while another one is still waiting: the turn that
@@ -377,13 +377,13 @@ test('the status line distinguishes a change from a deliberate no-change', () =>
 // `turn.step`'s `model` goes to the API as written, so a family alias has to
 // become an id there; the engine refuses "haiku" on a request.
 test('a family alias resolves to a full id for the main loop', () => {
-  expect(requestModelId('haiku')).toBe('claude-haiku-4-5-20251001')
-  expect(requestModelId('Sonnet')).toBe('claude-sonnet-5')
-  expect(requestModelId('opus')).toBe('claude-opus-5')
+  expect(requestModelId('haiku')).toBe('claude-haiku-5-5')
+  expect(requestModelId('Sonnet')).toBe('claude-sonnet-5-5')
+  expect(requestModelId('opus')).toBe('claude-opus-5-5')
 })
 
 test('a full id or an unknown name is passed through unchanged', () => {
-  expect(requestModelId('claude-haiku-4-5-20251001')).toBe('claude-haiku-4-5-20251001')
+  expect(requestModelId('claude-haiku-5-5')).toBe('claude-haiku-5-5')
   expect(requestModelId('claude-opus-5[1m]')).toBe('claude-opus-5[1m]')
   expect(requestModelId('my-org/custom')).toBe('my-org/custom')
 })
