@@ -12,7 +12,6 @@
   - Frontend state/auth/data loading → **proj-app-db-inspect**
   - Re-frame event flow/perf → **proj-reframe-events-analysis**
   - Build/compile/runtime logs → **proj-system-logs**
-  - Docs vs code alignment → **doc-alignment-audit**
 - Interactive browser testing → **claude-in-chrome** in Claude Code (uses the real Chrome session and logins); **chrome-devtools** only in other clients such as Copilot, Gemini, zcode (use IDs and verify selectability).
 - Database work (queries, inspection, schema info) → **postgres-mcp** tools.
 - Article alias mapping throughput: for mixed alias→article targets, use `bb scripts/bb/articles/map_aliases.clj ... --mappings-file tmp/<file>.edn` in one batch call; do not run one-by-one alias loops.
@@ -94,14 +93,12 @@ Use these to tail combined backend and frontend dev output:
 
 ```bash
 ./scripts/sh/monitoring/read_output.sh -f
-./sc
 ```
 
 ## Testing discipline
 
 - Run only relevant tests; avoid full-suite runs for targeted changes.
 - Always save full output once and analyze it; do not re-run just to grep. Use `tee` when saving output to a file.
-- See `docs/testing/README.md` for deeper guidance.
 - For REPL-driven workflows and examples (Clojure + ClojureScript), see `.github/copilot-instructions.md#testing-from-the-repl`.
 
 Verification (behavior changes / non-trivial changes): validate via **REPL and/or focused tests**; **at least one is required**. Minimum edge cases: happy path, `nil`, empty collections, invalid/boundary inputs. See the full checklist in `.github/copilot-instructions.md`.
@@ -117,7 +114,6 @@ bb be-test 2>&1 | tee tmp/backend-test-$(date +%H%M%S).txt
 ## Component ID requirements (browser testing)
 
 All interactive UI components must have unique `:id` attributes for browser automation (claude-in-chrome / chrome-devtools).
-See `INTERACTIVE-COMPONENTS-ID-AUDIT.md` for the canonical patterns.
 
 Use claude-in-chrome (Claude Code) or chrome-devtools (other clients) for interactive browser testing and element verification (IDs are mandatory).
 
@@ -142,5 +138,4 @@ When creating new components:
 ## Documentation pointers
 
 - `docs/index.md` (overview)
-- `docs/ai-quick-access.md` (AI pointers)
-- Skill docs: `.claude/skills/*/SKILL.md` or `.codex/skills/*/SKILL.md`
+- Skill docs: `.claude/skills/*/SKILL.md` (thin wrappers) and `.github/skills/*/SKILL.md` (sources)
