@@ -9,9 +9,9 @@
   - `.md` → Morph edits.
   - Other files → standard edits with minimal diffs.
 - Debugging skill map:
-  - Frontend state/auth/data loading → **app-db-inspect**
-  - Re-frame event flow/perf → **reframe-events-analysis**
-  - Build/compile/runtime logs → **system-logs**
+  - Frontend state/auth/data loading → **proj-app-db-inspect**
+  - Re-frame event flow/perf → **proj-reframe-events-analysis**
+  - Build/compile/runtime logs → **proj-system-logs**
   - Docs vs code alignment → **doc-alignment-audit**
 - Interactive browser testing → **chrome-devtools** (use IDs and verify selectability).
 - Database work (queries, inspection, schema info) → **postgres-mcp** tools.
