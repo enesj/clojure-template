@@ -23,5 +23,6 @@
       "matchCommandLine": true
     },
     "diff": true
-  }
+  },
+  "editor.formatOnSave": true
 }
