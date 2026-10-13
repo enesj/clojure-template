@@ -49,7 +49,7 @@ Return all of the following sections:
 
 ## Mandatory repo constraints to reflect in plans
 
-- Clojure/EDN edits must use `clojure-mcp` structural editing tools.
+- Clojure/EDN edits: use standard edit tools; fix delimiter errors with `paren_repair`.
 - DB inspection/querying must use `postgres-mcp`; no direct `psql`.
 - DB schema changes happen only through migrations.
 - Temporary artifacts go under project `tmp/`.

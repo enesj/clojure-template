@@ -31,7 +31,7 @@ If there’s a conflict, follow the stricter rule.
   - dev DB: `(mig/migrate!)`
   - test DB: `(mig/migrate! :test)`
 - DB inspection/querying must use `postgres-mcp` tools (don’t guess schema).
-- Clojure/EDN edits must use `clojure-mcp` structural editors.
+- Clojure/EDN edits: use standard edit tools; fix delimiter errors with `paren_repair`.
 - Never touch secrets files (`config/.secrets.edn`, `.env`, etc.). If DB connection changes are needed, instruct the user with placeholder values.
 
 ## Canonical inputs (edit these)

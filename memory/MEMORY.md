@@ -36,7 +36,7 @@ When using `register-related-records-subs!` with `entity-singular "article"`, th
 - `bb run-app` — start dev server (auto-reload)
 - `bb be-test` — backend tests
 - `bb fe-test-parallel` — frontend tests
-- Use `clojure-mcp` structural edits for `.clj`/`.cljs`/`.cljc` files
+- Use standard edits for `.clj`/`.cljs`/`.cljc` files; `paren_repair` for delimiter errors
 - REPL on port 7888; for CLJS select build: `(shadow.cljs.devtools.api/nrepl-select :app)`
 
 ## Audit Artifacts

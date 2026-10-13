@@ -5,7 +5,7 @@
 - Need to locate context/docs or you don’t have an exact file → use Morph WarpGrep first.
 - Large file or multi-step analysis → use Lattice (load once, query/expand).
 - Edits by file type:
-  - `.clj`/`.cljs`/`.cljc`/`.edn` → clojure-mcp structural edits (see “MCP tool discipline” below).
+  - `.clj`/`.cljs`/`.cljc`/`.edn` → standard edits; repair delimiters with `paren_repair` (see “MCP tool discipline” below).
   - `.md` → Morph edits.
   - Other files → standard edits with minimal diffs.
 - Debugging skill map:
@@ -21,7 +21,7 @@
 
 These MCP servers are part of the app and should be your primary interface:
 
-- **Clojure/EDN edits**: Always use `clojure-mcp` structural editors for `.clj`/`.cljs`/`.cljc`/`.edn` changes (prefer `mcp__clojure-mcp__clojure_edit` and `mcp__clojure-mcp__clojure_edit_replace_sexp`). If a non-structural edit causes reader/compilation errors (unbalanced parens, invalid EDN, etc.), stop immediately and redo/fix using `clojure-mcp` instead of continuing with ad-hoc text edits.
+- **Clojure/EDN edits**: Use the standard edit tools for `.clj`/`.cljs`/`.cljc`/`.edn` changes (clojure-mcp runs in `:repl` profile: only `clojure_eval`, `list_nrepl_ports`, `paren_repair`). If an edit causes reader/compilation errors (unbalanced parens, invalid EDN, etc.), stop and fix with `mcp__clojure-mcp__paren_repair` (or `clj-paren-repair`) instead of continuing with ad-hoc text edits.
 - **REPL evaluation is the main feedback loop**: Use `clojure-mcp` eval tools for exploration, debugging, and running focused tests.
   - Discover running REPLs: `mcp__clojure-mcp__list_nrepl_ports`
   - Evaluate code: use the `clojure-mcp` eval tool available in your client (avoid shell-based REPL commands)
