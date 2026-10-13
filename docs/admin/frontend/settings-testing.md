@@ -18,7 +18,7 @@ This is a **UI verification workflow**, not a config-file-only or script-only wo
 ## Required setup
 
 - App running locally at `http://localhost:8085`
-- `chrome-devtools` available for real browser interaction
+- `claude-in-chrome` (Claude Code default) or `chrome-devtools` (other clients / fallback) available for real browser interaction
 - A plan document and a results document in the repo root or `tmp/`
 - At least two browser tabs/pages:
   - settings page

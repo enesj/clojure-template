@@ -13,7 +13,7 @@
   - Re-frame event flow/perf → **reframe-events-analysis**
   - Build/compile/runtime logs → **system-logs**
   - Docs vs code alignment → **doc-alignment-audit**
-- Interactive browser testing → **chrome-devtools** (use IDs and verify selectability).
+- Interactive browser testing → **claude-in-chrome** in Claude Code (uses the real Chrome session and logins); **chrome-devtools** for other clients, perf/Lighthouse, or as fallback (use IDs and verify selectability).
 - Database work (queries, inspection, schema info) → **postgres-mcp** tools.
 - Article alias mapping throughput: for mixed alias→article targets, use `bb scripts/bb/articles/map_aliases.clj ... --mappings-file tmp/<file>.edn` in one batch call; do not run one-by-one alias loops.
 
@@ -31,7 +31,7 @@ These MCP servers are part of the app and should be your primary interface:
   - If `mcp__postgres__execute_sql` returns `(empty)`, do not assume the query failed: the table may genuinely be empty, or the MCP session may not be connected to the expected DB.
   - Quick verification flow: run `mcp__postgres__list_tables`, then `SELECT current_database(), current_user;` and `SELECT COUNT(*) FROM <table>;` for the target table.
   - In VS Code, if results look suspicious, reconnect/restart the PostgreSQL MCP session and re-run the same checks before changing queries.
-- **Browser interactions**: Use `chrome-devtools` MCP tools for interactive UI testing and element verification; rely on stable `:id` attributes (see Component ID requirements below).
+- **Browser interactions**: In Claude Code, default to the `claude-in-chrome` tools (`mcp__claude-in-chrome__*`) for interactive UI testing and element verification. Use `chrome-devtools` MCP tools in other clients (Copilot, Gemini, zcode), for Lighthouse/performance traces, or as a fallback when the extension is unavailable. Rely on stable `:id` attributes (see Component ID requirements below).
 
 ## Clojure helper tools (installed)
 
@@ -116,10 +116,10 @@ bb be-test 2>&1 | tee tmp/backend-test-$(date +%H%M%S).txt
 
 ## Component ID requirements (browser testing)
 
-All interactive UI components must have unique `:id` attributes for chrome-devtools.
+All interactive UI components must have unique `:id` attributes for browser automation (claude-in-chrome / chrome-devtools).
 See `INTERACTIVE-COMPONENTS-ID-AUDIT.md` for the canonical patterns.
 
-Use chrome-devtools for interactive browser testing and element verification (IDs are mandatory).
+Use claude-in-chrome (Claude Code) or chrome-devtools (other clients) for interactive browser testing and element verification (IDs are mandatory).
 
 ID patterns (examples):
 
@@ -137,7 +137,7 @@ When creating new components:
 1. Always accept an `:id` prop.
 2. Generate fallback IDs when not provided.
 3. Error elements should have IDs too (`(str field-id "-error")`).
-4. Verify selectability via chrome-devtools.
+4. Verify selectability via browser automation (claude-in-chrome / chrome-devtools).
 
 ## Documentation pointers
 

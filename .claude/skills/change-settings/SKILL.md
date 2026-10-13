@@ -1,5 +1,5 @@
 ---
-description: "Apply settings changes through the real admin/user settings UI using chrome-devtools — no code modifications"
+description: "Apply settings changes through the real admin/user settings UI using browser automation (claude-in-chrome by default) — no code modifications"
 metadata:
   tags: ["settings", "admin", "user-settings", "chrome-devtools", "ui-automation"]
 ---
