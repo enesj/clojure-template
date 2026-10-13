@@ -1,7 +1,7 @@
 ---
 description: "Run real-UI settings verification for admin/user settings, record task-linked findings, and restore temporary changes"
 metadata:
-  tags: ["settings", "testing", "admin", "user-settings", "chrome-devtools", "verification"]
+  tags: ["settings", "testing", "admin", "user-settings", "claude-in-chrome", "verification"]
 ---
 
 # settings-testing

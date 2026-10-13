@@ -1,6 +1,6 @@
 ---
 name: change-settings
-description: "Apply settings changes through the real admin/user settings UI using chrome-devtools — no code modifications. Use when changing, enabling, disabling, locking, or configuring settings in admin or user settings pages."
+description: "Apply settings changes through the real admin/user settings UI using browser automation (claude-in-chrome in Claude Code, chrome-devtools in other clients) — no code modifications. Use when changing, enabling, disabling, locking, or configuring settings in admin or user settings pages."
 ---
 
 # change-settings
@@ -34,7 +34,7 @@ If the prompt is ambiguous about scope (admin vs user), ask before proceeding.
 
 ## Workflow
 
-1. **Navigate** to the specified settings page using `chrome-devtools`.
+1. **Navigate** to the specified settings page using browser automation: `claude-in-chrome` in Claude Code (real Chrome session, already logged in), or `chrome-devtools` in other clients (Copilot, Gemini, zcode). Equivalent steps below apply to either tool.
 2. **Enter edit mode** — click "Edit Settings".
 3. **Select the entity** from the entity dropdown.
 4. **Switch to the correct tab** if needed (View Options, Form Fields, or Table Columns).
