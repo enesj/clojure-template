@@ -10,7 +10,7 @@
   - For agent-driven DB reads/writes, use `postgres-mcp` only (no direct `psql`, including `bb -e` + `clojure.java.shell`).
   - If `(empty)`, verify before assuming failure: `mcp__postgres__list_tables` → `SELECT current_database(), current_user;` → `SELECT COUNT(*) FROM <table>;`.
   - VS Code: if results look inconsistent, reconnect/restart the PostgreSQL MCP session and re-run.
-- **Browser**: default to `claude-in-chrome` (`mcp__claude-in-chrome__*`; real Chrome session, no debug port or second login). Fall back to `chrome-devtools` for Lighthouse/perf traces or when the extension is unavailable (needs Chrome started with `--remote-debugging-port=9222` and a separate `--user-data-dir`). Ensure stable `:id` attributes (see `AGENTS.md` for ID patterns).
+- **Browser**: use `claude-in-chrome` (`mcp__claude-in-chrome__*`; real Chrome session, no debug port or second login). `chrome-devtools` is not used in Claude Code. Ensure stable `:id` attributes (see `AGENTS.md` for ID patterns).
 - **Railway (production)**: use `Railway-mcp` tools when the server is configured. Prefer MCP over CLI for structured output. Install once: `claude mcp add Railway npx @railway/mcp-server`. Key tools: `get-logs`, `list-variables`, `list-services`, `deploy`. Full reference: `docs/general/operations/railway-deployment.md#railway-mcp-server-ai-native-debugging`.
 
 ## Entrypoints

@@ -13,7 +13,7 @@
   - Re-frame event flow/perf → **reframe-events-analysis**
   - Build/compile/runtime logs → **system-logs**
   - Docs vs code alignment → **doc-alignment-audit**
-- Interactive browser testing → **claude-in-chrome** in Claude Code (uses the real Chrome session and logins); **chrome-devtools** for other clients, perf/Lighthouse, or as fallback (use IDs and verify selectability).
+- Interactive browser testing → **claude-in-chrome** in Claude Code (uses the real Chrome session and logins); **chrome-devtools** only in other clients such as Copilot, Gemini, zcode (use IDs and verify selectability).
 - Database work (queries, inspection, schema info) → **postgres-mcp** tools.
 - Article alias mapping throughput: for mixed alias→article targets, use `bb scripts/bb/articles/map_aliases.clj ... --mappings-file tmp/<file>.edn` in one batch call; do not run one-by-one alias loops.
 
@@ -31,7 +31,7 @@ These MCP servers are part of the app and should be your primary interface:
   - If `mcp__postgres__execute_sql` returns `(empty)`, do not assume the query failed: the table may genuinely be empty, or the MCP session may not be connected to the expected DB.
   - Quick verification flow: run `mcp__postgres__list_tables`, then `SELECT current_database(), current_user;` and `SELECT COUNT(*) FROM <table>;` for the target table.
   - In VS Code, if results look suspicious, reconnect/restart the PostgreSQL MCP session and re-run the same checks before changing queries.
-- **Browser interactions**: In Claude Code, default to the `claude-in-chrome` tools (`mcp__claude-in-chrome__*`) for interactive UI testing and element verification. Use `chrome-devtools` MCP tools in other clients (Copilot, Gemini, zcode), for Lighthouse/performance traces, or as a fallback when the extension is unavailable. Rely on stable `:id` attributes (see Component ID requirements below).
+- **Browser interactions**: In Claude Code, use the `claude-in-chrome` tools (`mcp__claude-in-chrome__*`) for interactive UI testing and element verification; `chrome-devtools` is not configured for Claude Code. Other clients (Copilot, Gemini, zcode) use `chrome-devtools` MCP tools. Rely on stable `:id` attributes (see Component ID requirements below).
 
 ## Clojure helper tools (installed)
 
