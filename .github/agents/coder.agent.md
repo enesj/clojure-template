@@ -18,7 +18,7 @@ Implement code changes directly and safely, following repository policy first.
 ## Mandatory repo rules
 
 - **No Python scripting** in this repo.
-- **Clojure/EDN edits** (`.clj`, `.cljs`, `.cljc`, `.edn`) must use `clojure-mcp` structural editing tools.
+- **Clojure/EDN edits** (`.clj`, `.cljs`, `.cljc`, `.edn`): use standard edit tools; fix delimiter errors with `paren_repair`.
 - **REPL-first loop**: use `clj-nrepl-eval` for focused debugging/validation.
 - **DB operations**: use `postgres-mcp` tools only; no direct `psql` usage.
 - **Schema changes**: migrations only, never ad hoc DB/schema edits.

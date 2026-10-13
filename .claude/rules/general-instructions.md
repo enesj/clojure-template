@@ -4,7 +4,7 @@
 
 ## MCP tools (default)
 
-- **Clojure/EDN** (`.clj`/`.cljs`/`.cljc`/`.edn`): use `clojure-mcp` structural edits (prefer `mcp__clojure-mcp__clojure_edit`). If a plain-text edit causes reader/compilation errors (unbalanced parens/invalid EDN), stop and redo with `clojure-mcp`.
+- **Clojure/EDN** (`.clj`/`.cljs`/`.cljc`/`.edn`): use the standard edit tools. If an edit causes reader/compilation errors (unbalanced parens/invalid EDN), fix it with `mcp__clojure-mcp__paren_repair` (or `clj-paren-repair <file>`) rather than hunting parens by hand.
 - **REPL**: use `clj-nrepl-eval` (shell) for exploration, debugging, and focused tests (examples below).
 - **DB**: use `postgres-mcp` for queries + schema (e.g. `mcp__postgres__execute_sql`, `mcp__postgres__list_tables`).
   - For agent-driven DB reads/writes, use `postgres-mcp` only (no direct `psql`, including `bb -e` + `clojure.java.shell`).

@@ -40,7 +40,7 @@ Treat the active user prompt as the scope definition, but default to this workfl
 - Use `postgres-mcp` for database inspection and count reconciliation.
 - Use the reusable scripts in `scripts/bb/expenses/` for batch planning and batch reparses.
 - Save terminal/test artifacts under `tmp/`.
-- For `.clj` / `.cljs` / `.cljc` edits, use the Clojure structural editing tools.
+- For `.clj` / `.cljs` / `.cljc` edits, use standard edits; `paren_repair` for delimiter errors.
 - Prefer direct Clojure MCP eval for one-off inspection, but keep the repeatable execution path script-based.
 - Do not stop at test execution alone; finish the batch analysis and report.
 

@@ -92,7 +92,7 @@ For each batch:
    - Note any vars that might be used via indirection
 
 2. **Remove the item**:
-   - Use `clojure-mcp` structural edits for `.clj`/`.cljs`/`.cljc` files
+   - Use standard edits for `.clj`/`.cljs`/`.cljc` files (`paren_repair` for delimiter errors)
    - **For `unused-public-var` / `unused-private-var`**:
      - Remove the entire `defn`/`def`/`defn-` form
      - For re-frame keywords: remove the entire `reg-event-fx`/`reg-sub` block

@@ -19,7 +19,7 @@ You triage app issues with an evidence-first workflow. Your job is to reproduce,
 
 - **No Python scripting** in this repo.
 - **Temporary artifacts** must be project-local under `tmp/`.
-- **Clojure/EDN edits** (`.clj`, `.cljs`, `.cljc`, `.edn`) must use `clojure-mcp` structural editing tools.
+- **Clojure/EDN edits** (`.clj`, `.cljs`, `.cljc`, `.edn`): use standard edit tools; fix delimiter errors with `paren_repair`.
 - **Database querying/inspection** must use `postgres-mcp` only (no direct `psql`).
 - **No secrets editing** (`config/.secrets.edn`, `~/.secrets.edn`, `.env`, `.postgres.env`, CI secrets). If needed, instruct user with placeholders.
 - Keep work scoped to triage and evidence collection; avoid unrelated refactors.
