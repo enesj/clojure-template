@@ -3,6 +3,7 @@
   articles, alias mapping). Callers wrap writes in `jdbc/with-transaction`."
   (:require
     [app.domain.backend.expenses.services.articles.normalization :as normalization]
+    [app.domain.backend.expenses.services.articles.package :as package]
     [app.domain.backend.expenses.services.service-configs.normalization :as cfg-normalization]
     [clojure.string :as str]
     [honey.sql :as sql]
@@ -130,16 +131,25 @@
           (when-let [m (find!)]
             (assoc m :created? (pos? (update-count r)))))))))
 
+(defn package-columns-for
+  "Package columns parsed from the name for pieces (`kom`); all nil for weighed/volume units."
+  [canonical-name unit]
+  (if (= "kom" unit)
+    (package/package-columns canonical-name)
+    {:package_size nil :package_unit nil :pack_count nil}))
+
 (defn ensure-article!
-  "Find the article by catalog/backend key and unit, else insert it. Returns {:id :created?}."
+  "Find the article by catalog/backend key and unit, else insert it (package columns parsed from the
+  name). Returns {:id :created?}."
   [db {:keys [canonical-name unit subcategory-id manufacturer-id]}]
   (if-let [a (find-article db (catalog-keys canonical-name) unit)]
     {:id (:id a) :created? false}
     (let [ck (normalization/normalize-catalog-key canonical-name)
           r  (jdbc/execute-one! db
                (sql/format {:insert-into :articles
-                            :values [{:id (random-uuid) :canonical_name canonical-name :normalized_key ck
-                                      :unit unit :subcategory_id subcategory-id :manufacturer_id manufacturer-id}]
+                            :values [(merge {:id (random-uuid) :canonical_name canonical-name :normalized_key ck
+                                             :unit unit :subcategory_id subcategory-id :manufacturer_id manufacturer-id}
+                                       (package-columns-for canonical-name unit))]
                             :on-conflict [:normalized_key :unit] :do-nothing true}))
           a  (find-article db [ck] unit)]
       {:id (:id a) :created? (pos? (update-count r))})))

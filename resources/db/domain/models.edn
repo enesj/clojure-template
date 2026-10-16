@@ -461,6 +461,11 @@
                      [:link :text]
                      ;; Canonical manufacturer reference.
                      [:manufacturer_id :uuid {:foreign-key :manufacturers/id :on-delete :set-null}]
+                     ;; Contents of one piece, parsed from canonical_name (article-package/parse-package).
+                     ;; Base units only: g | ml | kom. "6x50g" -> pack_count 6, package_size 50, package_unit g.
+                     [:package_size [:decimal 10 3]]
+                     [:package_unit [:varchar 5]]
+                     [:pack_count :integer]
                      [:created_at :timestamptz {:default [:now]}]
                      [:updated_at :timestamptz {:default [:now]}]]
             :indexes [[:idx_articles_normalized_key :btree {:fields [:normalized_key :unit] :unique true}]

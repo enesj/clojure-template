@@ -236,6 +236,9 @@
    [:manufacturer_id
     :uuid
     {:foreign-key :manufacturers/id, :on-delete :set-null}]
+   [:package_size [:decimal 10 3]]
+   [:package_unit [:varchar 5]]
+   [:pack_count :integer]
    [:created_at :timestamptz {:default [:now]}]
    [:updated_at :timestamptz {:default [:now]}]],
   :indexes

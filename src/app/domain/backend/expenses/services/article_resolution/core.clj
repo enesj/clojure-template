@@ -542,11 +542,12 @@
                   {:action :remapped :article-id (:id target)})
                 (do (jdbc/execute-one! tx
                       (sql/format {:update :articles
-                                   :set {:canonical_name name*
-                                         :normalized_key (normalization/normalize-catalog-key name*)
-                                         :subcategory_id (:id sub-row)
-                                         :manufacturer_id (:id mfr-row)
-                                         :updated_at [:now]}
+                                   :set (merge {:canonical_name name*
+                                                :normalized_key (normalization/normalize-catalog-key name*)
+                                                :subcategory_id (:id sub-row)
+                                                :manufacturer_id (:id mfr-row)
+                                                :updated_at [:now]}
+                                          (catalog/package-columns-for name* (:unit old)))
                                    :where [:= :id (:id old)]}))
                     {:action :updated :article-id (:id old)})))))]
     (queue/mark-audited! db (:resolution-ids group)

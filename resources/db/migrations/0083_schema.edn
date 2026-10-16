@@ -1,0 +1,12 @@
+({:action :add-column,
+  :field-name :package-unit,
+  :model-name :articles,
+  :options {:type [:varchar 5]}}
+ {:action :add-column,
+  :field-name :pack-count,
+  :model-name :articles,
+  :options {:type :integer}}
+ {:action :add-column,
+  :field-name :package-size,
+  :model-name :articles,
+  :options {:type [:decimal 10 3]}})

@@ -78,3 +78,14 @@ drop out of the candidate list.
 **Catalog keys**: new rows use `normalization/normalize-catalog-key` (a port of bb `articles.db/normalize-key`),
 and lookups also accept the backend `normalize-article-key` form. Taxonomy hint files live in
 `resources/articles/taxonomy/` and are read-only for the backend.
+
+## Article package size
+
+`articles.package_size` / `package_unit` (`g` | `ml` | `kom`, base units) / `pack_count` describe the contents of
+one piece of a `kom` article and are parsed from `canonical_name` by
+`services/articles/package.clj` (`parse-package`): "Coca-Cola 1,25L" → 1250 ml, "Keks 2x300g" → 2 × 300 g,
+"Baterije AA 10 kom" → 10 kom. Names without a single clear size stay NULL. The resolver fills the columns when it
+creates or renames an article; `package/backfill!` (`{:dry-run? true}` first) fills older rows, including those
+created by `scripts/bb/articles/create_articles.clj`. Price per kg / l / piece is never stored:
+`package/unit-prices` derives it from `expense_items.unit_price`. Non-consumables keep their capacity
+("Kutija 70L"), which is harmless.
