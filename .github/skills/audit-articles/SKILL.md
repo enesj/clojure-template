@@ -113,7 +113,10 @@ audited with verdict `fixed`, so no separate `mark-audited!` is needed.
 
 `approve!` throws `{:status 400 :problems [...]}` when the proposal is invalid (e.g. unknown category); fix the
 override and retry. A proposal with `"action": "noise"` is confirmed as noise by `approve!` with no overrides.
-If you cannot tell what the product is, leave the group unaudited and list it in the report for the user.
+Before giving up on a label, check the supplier's other aliases (a butcher, salon or café explains short labels)
+and prefer a generic name at the label's level of detail ("JOG 3 2,8% 500G DB" → "Jogurt 2,8% 500g"): a generic
+mapping beats an unmapped alias, whose spending is invisible. Only when even the product type is unknown, leave the
+group unaudited and list it in the report for the user.
 
 ### 3. Repeat
 
