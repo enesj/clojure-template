@@ -63,6 +63,10 @@ Category rules:
   Restorani i kafići / Kafa i topli napici, Pića or Hrana. Packaged coffee bought in a shop stays
   Pakovana hrana i pića / Kafa.
 - Pita and burek (krompiruša, sirnica, zeljanica, burek), packaged or from a bakery: Pekara i deserti / Pecivo.
+- Somun, kifla, baget, tortilje and other bread rolls or flatbreads, packaged or not: Pekara i deserti / Pecivo
+  (never Tjestenina or Slatkiši). Loaves are Pekara i deserti / Hljeb.
+- Gift wrap, gift bags (ukrasna kesa, poklon torbica), ukrasni papir and gift tags (oznake za poklone):
+  Pokloni i cvijeće / Ukrasna ambalaža. Plain shopping bags stay Jednokratno posuđe i pakovanje / Kese.
 - Face creams and masks: Lična njega / Njega lica. Body lotion and shower gel: Lična njega / Njega tijela.
 - Sweeteners: Pakovana hrana i pića / Sladila.
 - Beer, wine and spirits: Pakovana hrana i pića / Alkoholna pića.
