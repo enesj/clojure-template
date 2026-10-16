@@ -20,14 +20,15 @@
         (every? (comp nil? text/safe-trim) rest*)))))
 
 (def summary-prefixes
-  ["ve" "vm" "osn" "pdv" "пдв" "vat" "tax" "porez" "порез"
+  ["ve" "vm" "osn" "pdv" "pdu" "ue" "пдв" "vat" "tax" "porez" "порез"
    "jib" "pib" "ibfm" "bf" "uplac" "upl" "gotovina" "kartica" "cek" "ček" "povrat" "ukupno" "укупно" "total"
    "ukupan" "укупан" "platna kartica" "платна картица" "готовина" "картица"
    "примљено" "razlika za povrat" "разлика за поврат"
    "popust" "pupust" "rabat" "discount" "akcija" "snizenje" "sniženje"])
 
 (def ^:private whole-word-summary-prefixes
-  #{"ve" "vm" "osn" "cek" "ček"})
+  ;; "pdu" and "ue" are OCR misreadings of "PDV" and "VE"
+  #{"ve" "vm" "osn" "cek" "ček" "pdu" "ue"})
 
 (defn summary-label?
   [label]

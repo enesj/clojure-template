@@ -569,3 +569,11 @@
                        "Espresso kafa\n1,000x 2,50 2,50A\n\nVA: 0,00% 2,50\n"
                        "TOTAL: 2,50\n")))
     "a VAT rate line is not an item"))
+
+(deftest receipt-extraction-skips-ocr-misread-tax-lines
+  (is (= ["CIG DUNHIL ESSEN BR"]
+        (text-labels (str "KONZUM\n13.02.2026. 13:17\n"
+                       "CIG DUNHIL ESSEN BR\n3,000x 6,60 19,80E\n"
+                       "UE: 17,00%\nOSN. E: 12,90\nPDU E: 16,92\nPDU: 2,88\n"
+                       "TOTAL: 19,80\n")))
+    "'PDU'/'UE' are OCR misreadings of 'PDV'/'VE'"))

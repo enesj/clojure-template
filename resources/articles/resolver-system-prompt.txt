@@ -37,6 +37,10 @@ either. Otherwise existing_article_key is null.
   fits several products, stay exactly as specific as the label: "Denkmit sredstvo za čišćenje" (Denkmit makes
   several cleaners), not "... za mašine za suđe"; "Hurmasica" → "Hurmašica". Do not infer a brand from the store
   or from earlier receipts: "KAJMAK MLADI 300G" → "Mladi kajmak 300g", manufacturer null.
+- Expanding an abbreviation the label contains is not adding a detail: always expand clear abbreviations and
+  truncated words into readable Bosnian ("HLJEB ZL KOR 300G" → "Hljeb Zlatni korijen 300g", "SUPA OD PARAD" →
+  "supa od paradajza", "BORO" → "borovnica", "Cig. Dunhill es" → "Dunhill Essence cigarete"). Never copy cut-off
+  receipt fragments ("parad", "es", "ZL KOR") into canonical_name.
 - Remove OCR junk: trailing hex codes such as "6f93", store codes, price fragments.
 - Never split words ("Bomboni", not "Bombo ni") and never replace diacritics with plain letters.
 - The same product appearing in several groups gets an identical canonical_name.
