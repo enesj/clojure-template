@@ -62,6 +62,35 @@
     (and (string? label)
       (re-find #"(?iu)(?:\d[x×]\d[\p{L}\d.,]*|\d(?:mm|cm)|[x×])$" (str/trim label)))))
 
+(defn- tax-rate-label?
+  "VAT rate lines such as 'VA: 0,00%' or 'VE: 17,00%' (rate letter + percentage), never an item."
+  [label]
+  (boolean
+    (and (string? label)
+      (re-matches #"(?iu)^\p{L}{1,3}\s*:\s*-?\d[\d,\.]*\s*%$" (str/trim label)))))
+
+(defn- tail-fragment?
+  "True for the second half of a product name that the receipt printer wrapped onto the price line:
+  a unit stub ('KO', 'M', 'kom 1'), a code-only tail ('12 3a40', 'X 10 3470', 'MG 1 A 3a26') or a short
+  word followed by a pharmacy code ('slojev 7369', 'SNALIJ 577f', '0 SA P 172e'). Such a label never
+  names a product on its own, so it is appended to the pending label line above it."
+  [label]
+  (let [label (some-> label text/safe-trim)]
+    (boolean
+      (and label
+        (or (and (re-find #"\d" label) (not (re-find #"\p{L}{3,}" label)))
+          (re-matches #"(?iu)\p{L}{1,2}" label)
+          (re-matches #"(?iu)(?:kom|ko|kg|gr|ml)\.?(?:\s+\d{1,3})?" label)
+          (re-matches #"(?iu)(?:\d{1,3}\s+)?\p{L}{1,7}(?:\s+\p{L}{1,2})?\s+(?=[0-9a-f]*\d)[0-9a-f]{3,4}" label))))))
+
+(defn- join-wrapped-label
+  "Join a pending label line and its wrapped tail. A unit split across the wrap ('.../KO' + 'M') is
+  re-joined without a space."
+  [pending tail]
+  (if (and (re-find #"(?iu)/\s*ko$" pending) (re-matches #"(?iu)m" tail))
+    (str pending tail)
+    (str pending " " tail)))
+
 (defn- line->text-item
   [line]
   (let [line (some-> line text/safe-trim)
@@ -88,6 +117,7 @@
                   (or (re-find #"\p{L}" label)
                     (barcode-label? label))
                   (not (qty-price-fragment-label? label))
+                  (not (tax-rate-label? label))
                   (not (table-items/summary-label? (text/normalize-text label))))
             {:raw_label label
              :qty qty
@@ -245,6 +275,9 @@
                 (nil? raw-label)
                 (assoc inline-item :raw_label pending)
 
+                (tail-fragment? raw-label)
+                (assoc inline-item :raw_label (join-wrapped-label pending raw-label))
+
                 (not (or (continuation-label? raw-label)
                        (wrapped-label-tail? pending)))
                 inline-item
@@ -344,14 +377,21 @@
               (text-item-label-line? line (second remaining))
               (let [label (some-> line table-items/normalize-item-label text/safe-trim)
                     label-norm (text/normalize-text label)
+                    next-line (second remaining)
                     continuation? (and pending-label
                                     label
-                                    (code-like-continuation? label)
-                                    (some? (line->money-only (second remaining))))]
+                                    (or (and (code-like-continuation? label)
+                                          (some? (line->money-only next-line)))
+                                      ;; wrapped tail followed by its qty/price line
+                                      (and (tail-fragment? label)
+                                        (some? (or (line->money-only next-line)
+                                                 (line->qty-unit-total next-line)
+                                                 (line->price-qty-total next-line)
+                                                 (line->qty-only next-line))))))]
                 (recur (rest remaining)
                   (cond
                     continuation?
-                    (str pending-label " " label)
+                    (join-wrapped-label pending-label label)
 
                     (and label (re-find #"\p{L}" label) (not (table-items/summary-label? label-norm)))
                     label

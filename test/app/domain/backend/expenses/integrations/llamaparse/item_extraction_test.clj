@@ -538,3 +538,34 @@
     (is (= 2 (count items)))
     (is (= [15.00M 40.00M] (mapv (comp bigdec :line_total) items)))
     (is (= 55.00M (bigdec (get-in extraction [:totals :total]))))))
+
+(defn- text-labels
+  [text]
+  (mapv :raw_label (:items (receipt-extract/response->extraction
+                             {:items {:pages [{:items [{:type "text" :md text}]}]}
+                              :text {:pages [{:text text}]}}))))
+
+(deftest receipt-extraction-joins-wrapped-label-tails
+  (is (= ["FLASTER MICROTAPE 25 MM X 9 1 M A 12 3a40"
+          "KOMPRESE STERILNE 5 CM X 5 CM 12 slojev 7369"]
+        (text-labels (str "APOTEKE SARAJEVO\n06.05.2026.17:10\n"
+                       "FLASTER_MICROTAPE_25_MM_X_9_1_M_A_\n12_3a40\t3,70E\n"
+                       "KOMPRESE_STERILNE_5_CM_X_5_CM__12_\nslojev_7369\n2,000x\t1,00\t2,00E\n"
+                       "TOTAL:\t5,70\n")))
+    "pharmacy name line + code tail (inline price, and qty line after the tail)")
+  (is (= ["RIONDO PROSECCO DOC SPUMANTE 200 KO" "FINI MINI JUHA OD RAJC. I MOZZ 2/ KO"]
+        (text-labels (str "SAMON PROMET\n14.05.2026.19:29\n"
+                       "RIONDO PROSECCO DOC SPUMANTE 200_\nKO 5,60E\n"
+                       "FINI MINI JUHA OD RAJC. I MOZZ 2/\nKO\n2,000x 1,00 2,00E\n"
+                       "TOTAL: 7,60\n")))
+    "unit stub 'KO' on its own line")
+  (is (= ["CIGARETE DUNHILL ESSENCE BRONZE/KOM"]
+        (text-labels (str "Robot General Trading Co\n01.04.2026. 18:13\n"
+                       "CIGARETE DUNHILL ESSENCE BRONZE/KO\nM\n\n5,000x 6,60 33,00E\n"
+                       "TOTAL: 33,00\n")))
+    "'/KO' + 'M' is re-joined into '/KOM'")
+  (is (= ["Espresso kafa"]
+        (text-labels (str "Caffe Bar\n27.02.2026. 14:35\n"
+                       "Espresso kafa\n1,000x 2,50 2,50A\n\nVA: 0,00% 2,50\n"
+                       "TOTAL: 2,50\n")))
+    "a VAT rate line is not an item"))

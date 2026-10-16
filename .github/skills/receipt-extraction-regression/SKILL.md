@@ -153,3 +153,5 @@ If code has already been modified and no baseline report exists:
 - The right fix for generic headings is a **code-level guard**, not refinement.
 - Refinement is optional / conditional and should not be the primary defense for deterministic parser artifacts.
 - Parallel replay audits must avoid shared root-var mutation.
+- Wrapped item names (pharmacy `NAME_LINE` + `12_3a40  3,70E`, `.../KO` + `M`, `NAME 2/` + `KO` + qty line) are
+  joined in `text_items.clj` (`tail-fragment?`); replay of 330 receipts changed 17 labels, 0 totals.
