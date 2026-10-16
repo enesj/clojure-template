@@ -61,7 +61,7 @@ and the worker backs off exponentially.
 **Admin API** (`/admin/api/expenses/article-resolutions`): `GET ""` (`status`, `limit`, `offset`), `GET /stats`,
 `POST /run` (one small sweep, 202), `POST /enqueue-backlog {"limit": n≤500}`, `POST /:id/approve` (optional
 overrides), `POST /:id/reject`, `POST /:id/requeue` (paid: Claude answers again),
-`GET /audit-candidates` (`max_confidence` default 80, `limit`), `POST /:id/audited {"verdict": "ok|fixed|rejected", "note": ".."}`.
+`GET /audit-candidates` (`max_confidence` default 80, `limit`), `POST /:id/correct` (audit fix of a resolved group), `POST /:id/audited {"verdict": "ok|fixed|rejected", "note": ".."}`. Workflow: `.github/skills/audit-articles/SKILL.md`.
 
 **Cost controls**: `:settle-minutes` waits for 50 pending rows or a row that old before calling Claude (manual
 `/run` skips the wait); groups missing from a partial response are re-sent once; the taxonomy is the last,

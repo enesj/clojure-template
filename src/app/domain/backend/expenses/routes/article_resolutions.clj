@@ -176,6 +176,22 @@
                                             {:verdict (some-> verdict name) :note note})})))
     "Failed to mark article resolution audited"))
 
+(defn correct-handler
+  "POST /:id/correct {canonical_name?, category?, subcategory?, manufacturer?, existing_article_key?}:
+  audit fix for a resolved group (edits the article in place or remaps the group); marks it audited."
+  [db app-config]
+  (utils/with-error-handling
+    (fn [request]
+      (try
+        (utils/success-response
+          {:result (factory/to-app (core/correct! db app-config (id-param request) (body-map request)))})
+        (catch clojure.lang.ExceptionInfo e
+          (let [{:keys [status problems]} (ex-data e)]
+            (if (and (= 400 status) (seq problems))
+              (utils/error-response (ex-message e) :status 400 :details {:problems problems})
+              (throw e))))))
+    "Failed to correct article resolution"))
+
 (defn routes
   "Route data for /article-resolutions (mounted under /admin/api/expenses)."
   [db app-config]
@@ -186,6 +202,7 @@
    ["/enqueue-backlog" {:post (enqueue-backlog-handler db)}]
    ["/audit-candidates" {:get (audit-candidates-handler db)}]
    ["/:id/audited" {:post (audited-handler db)}]
+   ["/:id/correct" {:post (correct-handler db app-config)}]
    ["/:id/approve" {:post (approve-handler db app-config)}]
    ["/:id/reject" {:post (reject-handler db)}]
    ["/:id/requeue" {:post (requeue-handler db)}]])

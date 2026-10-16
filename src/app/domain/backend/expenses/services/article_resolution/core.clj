@@ -20,6 +20,7 @@
     [app.domain.backend.expenses.services.articles.normalization :as normalization]
     [cheshire.core :as json]
     [clojure.string :as str]
+    [honey.sql :as sql]
     [next.jdbc :as jdbc]
     [next.jdbc.result-set :as rs]
     [taoensso.timbre :as log]))
@@ -464,6 +465,91 @@
     (when (empty? rows)
       (throw (ex-info "Article resolution not found" {:status 404 :resolution-id resolution-id})))
     (queue/mark-audited! db (mapv :resolution_id rows) {:verdict verdict :note note})))
+
+(defn- current-article
+  [db article-id]
+  (jdbc/execute-one! db
+    [(str "SELECT a.id, a.canonical_name, a.unit, a.subcategory_id, a.manufacturer_id,"
+       "       sc.name AS subcategory, c.name AS category, m.display_name AS manufacturer"
+       " FROM articles a"
+       " LEFT JOIN subcategories sc ON sc.id = a.subcategory_id"
+       " LEFT JOIN categories c ON c.id = sc.category_id"
+       " LEFT JOIN manufacturers m ON m.id = a.manufacturer_id"
+       " WHERE a.id = ?")
+     article-id]
+    {:builder-fn rs/as-unqualified-lower-maps}))
+
+(defn- remap-group!
+  "Point the group's aliases, their expense items and resolution rows from `from-id` to `to-id`."
+  [tx group from-id to-id]
+  (let [alias-ids (:alias-ids group)]
+    (jdbc/execute-one! tx (sql/format {:update :article_aliases :set {:article_id to-id :updated_at [:now]}
+                                       :where [:and [:in :id alias-ids] [:= :article_id from-id]]}))
+    (jdbc/execute-one! tx (sql/format {:update :expense_items :set {:article_id to-id}
+                                       :where [:and [:in :alias_id alias-ids] [:= :article_id from-id]]}))
+    (jdbc/execute-one! tx (sql/format {:update :article_alias_resolutions :set {:article_id to-id :updated_at [:now]}
+                                       :where [:in :id (:resolution-ids group)]}))))
+
+(defn correct!
+  "Audit fix for a resolved group. `corrections` (snake_case keys, any subset): canonical_name, category,
+  subcategory, manufacturer (nil clears it) or existing_article_key (remap to that article).
+  - existing_article_key -> the group's aliases move to that article;
+  - the article is used only by this group and the corrected name is free -> the article is edited in place;
+  - otherwise (shared article, or the new name already exists) -> the corrected article is found or created
+    and only this group moves to it. The old article is kept (nothing is deleted).
+  Marks the group audited with verdict \"fixed\". No Claude call.
+  Returns {:action :remapped|:updated :article-id uuid}. Throws {:status 400|404|409}."
+  [db app-config resolution-id corrections]
+  (let [cfg   (config/build-config app-config)
+        c     (override-keys corrections)
+        rows  (queue/group-rows db resolution-id ["resolved"])
+        _     (when (empty? rows)
+                (throw (ex-info "Resolution is not resolved" {:status 409 :resolution-id resolution-id})))
+        group {:alias-ids (mapv :alias_id rows) :resolution-ids (mapv :resolution_id rows)}
+        old   (some->> (jdbc/execute-one! db ["SELECT article_id FROM article_aliases WHERE id = ?" (first (:alias-ids group))]
+                         {:builder-fn rs/as-unqualified-lower-maps})
+                :article_id (current-article db))
+        _     (when-not old (throw (ex-info "Group has no article" {:status 409 :resolution-id resolution-id})))
+        result
+        (jdbc/with-transaction [tx db]
+          (if-let [k (some-> (:existing_article_key c) str/trim not-empty)]
+            (let [target (or (catalog/find-article tx (catalog/catalog-keys k) (:unit old))
+                           (catalog/find-article tx [k] (:unit old))
+                           (throw (ex-info "Existing article not found" {:status 400 :problems ["unknown-existing-key"]})))]
+              (remap-group! tx group (:id old) (:id target))
+              {:action :remapped :article-id (:id target)})
+            (let [index   (catalog/category-index tx #{})
+                  name*   (or (some-> (:canonical_name c) str/trim not-empty) (:canonical_name old))
+                  cat     (or (:category c) (:category old))
+                  sub     (or (:subcategory c) (:subcategory old))
+                  cat-row (or (get index cat) (throw (ex-info "Unknown category" {:status 400 :problems ["unknown-category"]})))
+                  sub-row (or (catalog/ensure-subcategory! tx (:id cat-row) sub (:allow-new-subcategories? cfg))
+                            (throw (ex-info "Subcategory not allowed" {:status 400 :problems ["new-subcategory-not-allowed"]})))
+                  mfr     (if (contains? c :manufacturer) (some-> (:manufacturer c) str/trim not-empty) (:manufacturer old))
+                  mfr-row (when mfr (catalog/ensure-manufacturer! tx mfr (:allow-new-manufacturers? cfg)))
+                  clash   (catalog/find-article tx (catalog/catalog-keys name*) (:unit old))
+                  shared? (pos? (:c (jdbc/execute-one! tx
+                                      (sql/format {:select [[[:count :*] :c]] :from [:article_aliases]
+                                                   :where [:and [:= :article_id (:id old)] [:not-in :id (:alias-ids group)]]})
+                                      {:builder-fn rs/as-unqualified-lower-maps})))]
+              (if (or shared? (and clash (not= (:id clash) (:id old))))
+                (let [target (catalog/ensure-article! tx {:canonical-name name* :unit (:unit old)
+                                                         :subcategory-id (:id sub-row) :manufacturer-id (:id mfr-row)})]
+                  (remap-group! tx group (:id old) (:id target))
+                  {:action :remapped :article-id (:id target)})
+                (do (jdbc/execute-one! tx
+                      (sql/format {:update :articles
+                                   :set {:canonical_name name*
+                                         :normalized_key (normalization/normalize-catalog-key name*)
+                                         :subcategory_id (:id sub-row)
+                                         :manufacturer_id (:id mfr-row)
+                                         :updated_at [:now]}
+                                   :where [:= :id (:id old)]}))
+                    {:action :updated :article-id (:id old)})))))]
+    (queue/mark-audited! db (:resolution-ids group)
+      {:verdict "fixed" :note (str "correct!: " (pr-str (select-keys c [:canonical_name :category :subcategory
+                                                                          :manufacturer :existing_article_key])))})
+    result))
 
 (defn- stored-low-confidence-ids
   "One needs_review resolution id per (label, unit) group held back only for low confidence, at or above

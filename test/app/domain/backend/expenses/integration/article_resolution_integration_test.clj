@@ -190,3 +190,41 @@
       (is (= #{"resolved"} (set (map :status (q db ["SELECT status::text AS status FROM article_alias_resolutions WHERE id = ANY(?)"
                                                     (into-array java.util.UUID ids)]))))
         "auditing never changes the status"))))
+
+(deftest correct-edits-in-place-or-remaps
+  (when-let [db fixtures/*test-db*]
+    (let [category   (insert-category! db)
+          app-config {:article-resolver {:apply-mode :auto :auto-apply-threshold 70}}
+          resolve!   (fn [label name*]
+                       (let [g (group-of db label)]
+                         (core/apply-decision! db cfg g (decision category :canonical-name name*) {:source "llm"})
+                         g))
+          article-of (fn [g] (:article_id (q1 db ["SELECT article_id FROM article_aliases WHERE id = ?" (first (:alias-ids g))])))]
+      (testing "sole user: article edited in place, group audited as fixed"
+        (let [g   (resolve! "it-correct-a" "IT Krivo ime 1L")
+              old (article-of g)
+              r   (core/correct! db app-config (first (:resolution-ids g))
+                    {:canonical_name "IT Ispravno ime 1L" :manufacturer nil})]
+          (is (= :updated (:action r)))
+          (is (= old (article-of g)))
+          (is (= "IT Ispravno ime 1L" (:canonical_name (q1 db ["SELECT canonical_name FROM articles WHERE id = ?" old]))))
+          (is (nil? (:manufacturer_id (q1 db ["SELECT manufacturer_id FROM articles WHERE id = ?" old]))))
+          (is (= #{"fixed"} (set (map :audit_verdict (q db ["SELECT audit_verdict FROM article_alias_resolutions WHERE id = ANY(?)"
+                                                            (into-array java.util.UUID (:resolution-ids g))])))))))
+      (testing "shared article: only this group moves to a new article; the other keeps the old one"
+        (let [g1  (resolve! "it-correct-b" "IT Dijeljeni 1L")
+              g2  (resolve! "it-correct-c" "IT Dijeljeni 1L")
+              old (article-of g1)
+              r   (core/correct! db app-config (first (:resolution-ids g2)) {:canonical_name "IT Drugi proizvod 1L"})]
+          (is (= :remapped (:action r)))
+          (is (= old (article-of g1)))
+          (is (= (:article-id r) (article-of g2)))
+          (is (not= old (:article-id r)))))
+      (testing "existing_article_key remaps; unknown key is a 400"
+        (let [target (resolve! "it-correct-d" "IT Cilj 1L")
+              g      (resolve! "it-correct-e" "IT Pogresno 1L")
+              r      (core/correct! db app-config (first (:resolution-ids g)) {:existing_article_key "it-cilj-1l"})]
+          (is (= (article-of target) (article-of g) (:article-id r)))
+          (is (= 400 (:status (ex-data (try (core/correct! db app-config (first (:resolution-ids target))
+                                              {:existing_article_key "nema-takvog"})
+                                            (catch clojure.lang.ExceptionInfo e e)))))))))))
