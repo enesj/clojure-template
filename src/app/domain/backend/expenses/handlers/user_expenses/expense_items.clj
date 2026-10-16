@@ -282,7 +282,7 @@
                     unit (or (parse-unit (h/get-param body :unit))
                            (:unit expense-row))
                     alias-id (when raw-label*
-                               (:id (aliases/find-or-create-alias! db supplier-id raw-label* unit)))
+                               (:id (aliases/find-or-create-alias! db supplier-id raw-label* unit {:allow-noise? true})))
                     updates {:alias_id (or alias-id
                                          (throw (ex-info "raw_label is required"
                                                   {:status 400

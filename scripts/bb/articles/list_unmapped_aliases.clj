@@ -66,7 +66,7 @@
               "  s.display_name AS supplier\n"
               "FROM article_aliases aa\n"
               "LEFT JOIN suppliers s ON s.id = aa.supplier_id\n"
-              (when-not all? "WHERE aa.article_id IS NULL\n")
+              (when-not all? (str "WHERE aa.article_id IS NULL AND " db/not-settled-noise-sql "\n"))
               "ORDER BY s.display_name NULLS LAST, aa.raw_label\n"
               "LIMIT " limit)
         rows (db/query db sql)]

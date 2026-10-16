@@ -681,7 +681,7 @@
                           unit (assoc :unit unit))
 
                         (some? raw-label)
-                        (let [alias (alias-svc db supplier-id raw-label unit)]
+                        (let [alias (alias-svc db supplier-id raw-label unit {:allow-noise? true})]
                           (cond-> (-> data
                                     (dissoc :raw_label :supplier_id)
                                     (assoc :alias_id (:id alias)))
@@ -698,7 +698,7 @@
                           unit (normalize-unit-value (:unit updates))]
                       (cond
                         (some? raw-label)
-                        (let [alias (alias-svc db supplier-id raw-label unit)]
+                        (let [alias (alias-svc db supplier-id raw-label unit {:allow-noise? true})]
                           (cond-> (-> updates
                                     (dissoc :raw_label :supplier_id)
                                     (assoc :alias_id (:id alias)))

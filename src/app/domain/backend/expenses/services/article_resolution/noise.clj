@@ -1,8 +1,26 @@
 (ns app.domain.backend.expenses.services.article-resolution.noise
   "OCR noise detection heuristics for raw receipt labels (pure).
-  Port of scripts/bb/articles/research/noise.clj."
+  Port of scripts/bb/articles/research/noise.clj, extended with Unicode-aware letter counts and
+  token rules for code-only fragments (\"69 60936564905\", \"MG 1 A 3a26\", \"0,280x 7,95\", \"kom 1\").
+  Used by the resolver's free stage and by alias creation (article-aliases/find-or-create-alias!)."
   (:require
     [clojure.string :as str]))
+
+(def ^:private unit-words
+  "Tokens that are units or quantity markers, never a product on their own."
+  #{"kom" "kg" "g" "gr" "l" "ml" "x" "km" "kn" "km." "kom." "pak" "kut"})
+
+(defn- tokens [s] (remove str/blank? (str/split s #"[\s/]+")))
+
+(defn- letters [s] (count (re-seq #"\p{L}" s)))
+
+(defn- word? [t] (>= (letters t) 3))
+
+(defn- mixed-hex?
+  "OCR/store code such as \"172e\", \"3a26\", \"577f\": 3-4 hex chars with both a digit and a letter a-f."
+  [t]
+  (let [t (str/lower-case t)]
+    (boolean (and (re-matches #"[0-9a-f]{3,4}" t) (re-find #"\d" t) (re-find #"[a-f]" t)))))
 
 (defn ocr-noise-reason
   "Heuristic OCR-noise detector. Takes a map with snake_case keys
@@ -12,15 +30,26 @@
         norm (or raw_label_normalized "")
         trimmed (str/trim raw)
         trimmed-norm (str/trim norm)
-        alnum (count (re-seq #"[A-Za-z0-9]" trimmed))]
+        alnum (count (re-seq #"[\p{L}\d]" trimmed))
+        toks (tokens trimmed)
+        words (filter word? toks)]
     (cond
       (str/blank? trimmed)       "blank"
       (str/blank? trimmed-norm)  "blank-normalized"
       (re-matches #"(?i)^(x+|\*+|\-+|\.+|,+|_+)$" trimmed) "punctuation-only"
-      (re-matches #"^\d+$" trimmed) "digits-only"
+      (re-matches #"^[\d\s.,:;x×*+\-=%/]+$" trimmed) "digits-only"
       (< alnum 3) "too-few-alnum"
       ;; "na" is a common Bosnian preposition ("on/for") - only flag "unknown" and "n/a"
       (re-find #"(?i)^(unknown|n/?a)$" trimmed) "placeholder"
+      ;; No token with 3+ letters: "MG 1 A 3a26", "A 30 3b52", "X 10 3470", "KO"
+      (empty? words) "no-word"
+      ;; Only unit words besides numbers: "kom 1", "KG 0,5"
+      (every? #(unit-words (str/lower-case %)) words) "unit-only"
+      ;; One short word next to a store/OCR hex code: "0 SAP 172e", "ČVRST 17e0", "SNALIJ 577f"
+      (and (= 1 (count words))
+        (<= (letters (first words)) 6)
+        (some mixed-hex? toks))
+      "word-with-code"
       ;; Hex suffix pattern - OCR artifacts like "6f93", "4f92", "2b3c".
       ;; Only flag when the hex IS the label or the label is very short with hex.
       (and (<= alnum 12)
@@ -30,3 +59,8 @@
           (< alnum 6)))
       "hex-ocr-artifact"
       :else nil)))
+
+(defn noise-label?
+  "True when `raw-label` looks like OCR noise rather than a product line."
+  [raw-label]
+  (some? (ocr-noise-reason {:raw_label raw-label :raw_label_normalized raw-label})))

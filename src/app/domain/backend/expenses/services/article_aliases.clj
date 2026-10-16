@@ -1,6 +1,7 @@
 (ns app.domain.backend.expenses.services.article-aliases
   "Article alias management (unified raw_label + article mapping)."
   (:require
+    [app.domain.backend.expenses.services.article-resolution.noise :as noise]
     [app.domain.backend.expenses.services.articles :as articles]
     [app.domain.backend.expenses.services.related-records :as rr]
     [app.domain.backend.expenses.services.service-configs :as configs]
@@ -108,7 +109,11 @@
                             [:= :ei.tenant_id tenant-uuid]]
                            [:= :ei.alias_id :aa.id])]
              :where [:and
-                     [:is :aa.article_id nil]]
+                     [:is :aa.article_id nil]
+                     ;; Settled as not-a-product by the resolver or a reviewer (noise / rejected)
+                     [:not [:exists {:select [1] :from [[:article_alias_resolutions :r]]
+                                     :where [:and [:= :r.alias_id :aa.id]
+                                             [:in [:cast :r.status :text] ["noise" "rejected"]]]}]]]
              :group-by [:aa.id :aa.unit :s.display_name]}
       supplier-uuid (update :where conj [:= :aa.supplier_id supplier-uuid])
       true (apply-unmapped-alias-filters {:supplier-name supplier-name
@@ -189,14 +194,24 @@
    - raw-label: the raw label text (required)
    - unit: canonical item unit; defaults to `kom` when blank/nil.
 
-   The normalized key is computed from raw-label using articles/normalize-alias-label."
+   The normalized key is computed from raw-label using articles/normalize-alias-label.
+
+   OCR noise (\"69 60936564905\", \"KO\", \"MG 1 A 3a26\"; see article-resolution.noise) throws
+   {:status 400 :reason :ocr-noise} so receipt extraction keeps the line without an alias. A label typed
+   by a user is trusted: pass {:allow-noise? true}."
   ([db supplier-id raw-label]
    (find-or-create-alias! db supplier-id raw-label nil))
   ([db supplier-id raw-label unit]
+   (find-or-create-alias! db supplier-id raw-label unit nil))
+  ([db supplier-id raw-label unit {:keys [allow-noise?]}]
    (when (str/blank? raw-label)
      (throw (ex-info "raw_label is required" {:status 400 :field :raw_label})))
    (let [raw-label* (str/trim raw-label)
          normalized (articles/normalize-alias-label raw-label*)
+         _ (when-let [reason (and (not allow-noise?)
+                               (noise/ocr-noise-reason {:raw_label raw-label* :raw_label_normalized normalized}))]
+             (throw (ex-info "raw_label looks like OCR noise"
+                      {:status 400 :field :raw_label :reason :ocr-noise :noise reason :raw_label raw-label*})))
          _ (when-not (valid-alias-normalized-key? normalized)
              (throw (ex-info "raw_label normalizes to an invalid key"
                       {:status 400

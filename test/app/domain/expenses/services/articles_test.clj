@@ -168,6 +168,18 @@
                                                     :limit 10
                                                     :offset 0}))))))
 
+(deftest article-aliases-find-or-create-rejects-ocr-noise-unless-allowed
+  (when-let [db fixtures/*test-db*]
+    (let [supplier (:supplier (suppliers/find-or-create-supplier! db (str "Noise Alias Supplier " (UUID/randomUUID)) {}))]
+      (doseq [raw-label ["69 60936564905" "MG 1 A 3a26" "kom 1"]]
+        (let [error (try (aliases/find-or-create-alias! db (:id supplier) raw-label "kom") nil
+                         (catch clojure.lang.ExceptionInfo e e))]
+          (is (= :ocr-noise (:reason (ex-data error))) raw-label)))
+      (is (empty? (aliases/list-article-aliases db {:supplier-id (:id supplier) :limit 10 :offset 0})))
+      (is (some? (:id (aliases/find-or-create-alias! db (:id supplier) "MG 1 A 3a26" "kom" {:allow-noise? true})))
+        "a label typed by a user is kept")
+      (is (some? (:id (aliases/find-or-create-alias! db (:id supplier) "Čaj" "kom"))) "short real product"))))
+
 (deftest articles-map-alias-to-article-makes-lookup-work
   (when-let [db fixtures/*test-db*]
     (let [supplier (:supplier (suppliers/find-or-create-supplier! db (str "MapItem Supplier " (UUID/randomUUID)) {}))

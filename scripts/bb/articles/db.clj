@@ -194,6 +194,11 @@
   [db sql]
   (first (query db sql)))
 
+(def not-settled-noise-sql
+  "SQL condition on alias `aa`: not already settled as noise/rejected by the backend article resolver."
+  (str "NOT EXISTS (SELECT 1 FROM article_alias_resolutions r WHERE r.alias_id = aa.id"
+    " AND r.status::text IN ('noise', 'rejected'))"))
+
 (defn pprint-edn
   "Pretty-print EDN to stdout."
   [x]

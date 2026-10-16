@@ -89,3 +89,13 @@ creates or renames an article; `package/backfill!` (`{:dry-run? true}` first) fi
 created by `scripts/bb/articles/create_articles.clj`. Price per kg / l / piece is never stored:
 `package/unit-prices` derives it from `expense_items.unit_price`. Non-consumables keep their capacity
 ("Kutija 70L"), which is harmless.
+
+## OCR noise labels
+
+`article-resolution.noise/ocr-noise-reason` (bb copy: `scripts/bb/articles/research/noise.clj`) flags receipt lines
+that are not products: digit/weight-price lines ("69 60936564905", "0,280x 7,95"), labels without a 3-letter word
+("MG 1 A 3a26", "KO"), unit-only lines ("kom 1") and a short word next to a pharmacy hex code ("0 SAP 172e").
+Letters are counted Unicode-aware ("Čaj" is a product). `article-aliases/find-or-create-alias!` refuses such labels
+by default (`{:status 400 :reason :ocr-noise}`), so receipt extraction keeps the line without creating an alias;
+labels typed by a user (expense create/edit, CRUD) pass `{:allow-noise? true}`. Aliases the resolver or a reviewer
+settled as `noise`/`rejected` are left out of unmapped-alias lists and counts (backend and bb scripts).

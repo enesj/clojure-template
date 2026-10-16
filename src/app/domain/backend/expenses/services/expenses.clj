@@ -63,7 +63,7 @@
 
      (and allow-auto-link?
        (valid-alias-label? raw_label))
-     (let [alias (aliases/find-or-create-alias! tx supplier-id (str/trim (str raw_label)) unit)]
+     (let [alias (aliases/find-or-create-alias! tx supplier-id (str/trim (str raw_label)) unit {:allow-noise? true})]
        alias)
 
      :else nil)))

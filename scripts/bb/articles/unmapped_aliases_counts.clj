@@ -59,7 +59,7 @@
               "  COUNT(*) AS occurrence_count\n"
               "FROM article_aliases aa\n"
               "LEFT JOIN suppliers s ON s.id = aa.supplier_id\n"
-              "WHERE aa.article_id IS NULL\n"
+              "WHERE aa.article_id IS NULL AND " db/not-settled-noise-sql "\n"
               "GROUP BY aa.raw_label, s.display_name\n"
               "ORDER BY occurrence_count DESC, aa.raw_label\n"
               "LIMIT " limit)

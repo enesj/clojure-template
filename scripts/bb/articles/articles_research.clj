@@ -129,7 +129,7 @@
       "       aa.supplier_id, s.display_name AS supplier\n"
       "FROM article_aliases aa\n"
       "LEFT JOIN suppliers s ON aa.supplier_id = s.id\n"
-      "WHERE aa.article_id IS NULL\n"
+      "WHERE aa.article_id IS NULL AND " db/not-settled-noise-sql "\n"
       "ORDER BY s.display_name NULLS LAST, aa.raw_label")))
 
 (defn- fetch-category-names [db]
