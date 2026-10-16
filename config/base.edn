@@ -197,6 +197,40 @@
  ;; See also: LLAMAPARSE_TIER, LLAMAPARSE_POLL_TIMEOUT_MS env overrides.
  :llamaparse {:tier "agentic"}
 
+ ;; Claude API (article resolver). Key: env ANTHROPIC_API_KEY or [:secrets :anthropic :api-key].
+ ;; Keys that are not scoped to a workspace also need ANTHROPIC_WORKSPACE_ID (or :workspace-id here).
+ :anthropic {:base-url          "https://api.anthropic.com"
+             :model             "claude-sonnet-5-5"
+             :effort            "medium"
+             :max-tokens        16000
+             :fallbacks?        true
+             :conn-timeout-ms   5000
+             :socket-timeout-ms 300000
+             :max-retries       3
+             :retry-sleep-ms    1000}
+
+ ;; Background alias -> article resolver (dev only for now). :apply-mode :dry-run never mutates
+ ;; the catalog; switch to :auto only after the evaluation gate (PLAN-auto-article-resolution.md, Phase 7).
+ :article-resolver {:enabled?                 #profile {:dev true :test false :prod false}
+                    :apply-mode               :auto
+                    :interval-seconds         60
+                    :lookback-hours           24
+                    :claim-limit              200
+                    :batch-size               50
+                    ;; Wait for 50 pending rows or a 15-minute-old row before calling Claude (shares the prompt cost)
+                    :settle-minutes           15
+                    :auto-apply-threshold     70
+                    :noise-threshold          90
+                    :allow-new-subcategories? true
+                    :allow-new-manufacturers? true
+                    :excluded-categories      ["Subscriptions" "Utilities" "Ostalo"]
+                    :stale-processing-seconds 600
+                    :max-attempts             3
+                    :candidate-limit          5
+                    ;; Jev (TypeSafe) fills a category Claude left empty or invalid. Key: TYPESAFE_API_KEY. Off: the audit agent covers it.
+                    ;; :mode :full also flags category disagreement / name mismatch (tested: no precision gain).
+                    :verifier                 {:enabled? false :mode :fill-category}}
+
  ;; Tenant provisioning defaults
  ;; These are copied into each new tenant's lookup tables on creation.
  ;; Labels/names may be locale maps {:en "..." :bs "..."} — resolved via :default-locale.

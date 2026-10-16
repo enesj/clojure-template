@@ -3,6 +3,7 @@
   (:require
     [app.domain.backend.expenses.routes.core :as expenses-admin-routes]
     [app.domain.backend.expenses.routes.user-api :as expenses-user-api-routes]
+    [app.domain.backend.expenses.workers.article-resolver :as article-resolver]
     [app.domain.backend.expenses.workers.receipt-ocr.recovery :as receipt-ocr-recovery]
     [app.domain.shared.routes.expenses-user :as expenses-user-route-contract]
     [taoensso.timbre :as log]))
@@ -18,7 +19,9 @@
    ;; Background workers: (fn [db app-config]) -> java.io.Closeable
    :workers
    {:receipt-ocr-recovery (fn [db app-config]
-                            (receipt-ocr-recovery/start! db app-config))}
+                            (receipt-ocr-recovery/start! db app-config))
+    :article-resolver (fn [db app-config]
+                        (article-resolver/start! db app-config))}
 
    :ui-config
    {:user {:root-dir "src/app/domain/frontend/expenses/config"

@@ -1,0 +1,271 @@
+;; 30 reviewed :ok resolutions (Sonnet 5.5, 2026-10). Manual regression set, not run in CI.
+[{:label "2PVC KESA SREDNJA 6f94",
+  :unit "kom",
+  :stores ["APOTEKE SARAJEVO"],
+  :expected
+  {:kind "article",
+   :canonical_name "PVC kesa srednja",
+   :category "Jednokratno posuđe i pakovanje",
+   :subcategory "Kese",
+   :manufacturer nil}}
+ {:label "APIPOL SIRUP ZA SMIRENJE KASLJ",
+  :unit "kom",
+  :stores ["MEDISAN"],
+  :expected
+  {:kind "article",
+   :canonical_name "Apipol sirup za smirenje kašlja",
+   :category "Zdravlje i apoteka",
+   :subcategory "Lijekovi",
+   :manufacturer nil}}
+ {:label "BATAK SA KARABATKOM ROLOVANI",
+  :unit "kg",
+  :stores ["BINGO"],
+  :expected
+  {:kind "article",
+   :canonical_name "Batak sa karabatkom rolovani",
+   :category "Meso, morski plodovi i delikatesi",
+   :subcategory "Svježe meso",
+   :manufacturer nil}}
+ {:label "BOMBONE 200G ZELE JELLY ROSHE",
+  :unit "kom",
+  :stores ["BINGO"],
+  :expected
+  {:kind "article",
+   :canonical_name "Roshen bombone Zele Jelly 200g",
+   :category "Pakovana hrana i pića",
+   :subcategory "Čokolada i bomboni",
+   :manufacturer "Roshen"}}
+ {:label "BULLDOG GIN SA ČAŠOM 0,7",
+  :unit "kom",
+  :stores ["ŠAMON PROMET"],
+  :expected
+  {:kind "article",
+   :canonical_name "Bulldog gin sa čašom 0,7L",
+   :category "Pakovana hrana i pića",
+   :subcategory "Alkoholna pića",
+   :manufacturer "Campari Group"}}
+ {:label "CASA ZA URIN KLIK 125 ML ROMED 48d7",
+  :unit "kom",
+  :stores ["APOTEKE SARAJEVO"],
+  :expected
+  {:kind "article",
+   :canonical_name "Čaša za urin Klik 125ml Romed",
+   :category "Zdravlje i apoteka",
+   :subcategory "Medicinski pribor",
+   :manufacturer nil}}
+ {:label "CIGARE DUNHILL DISTINCT BLE",
+  :unit "kom",
+  :stores ["HOSE-KOMERC"],
+  :expected
+  {:kind "article",
+   :canonical_name "Cigarete Dunhill Distinct Blue",
+   :category "Duhan i duvanski proizvodi",
+   :subcategory "Cigarete",
+   :manufacturer "BAT"}}
+ {:label "COKOLADNE BANANICE 400G STARK",
+  :unit "kom",
+  :stores ["BINGO"],
+  :expected
+  {:kind "article",
+   :canonical_name "Stark čokoladne bananice 400g",
+   :category "Pakovana hrana i pića",
+   :subcategory "Slatkiši",
+   :manufacturer "STARK"}}
+ {:label "DUKAT SIR FETA 500GR PRESID",
+  :unit "kom",
+  :stores ["HOSE-KOMERC"],
+  :expected
+  {:kind "article",
+   :canonical_name "Dukat sir feta 500g President",
+   :category "Mliječni proizvodi i jaja",
+   :subcategory "Sir",
+   :manufacturer "Dukat"}}
+ {:label "FAIRY 1350ML NAR",
+  :unit "kom",
+  :stores ["HOSE-KOMERC"],
+  :expected
+  {:kind "article",
+   :canonical_name "Fairy sredstvo za suđe naranča 1350ml",
+   :category "Sredstva za čišćenje",
+   :subcategory "Sredstvo za suđe",
+   :manufacturer "Procter & Gamble"}}
+ {:label "GALAS HERPEGAL MAST 10 G 5122",
+  :unit "kom",
+  :stores ["APOTEKE SARAJEVO"],
+  :expected
+  {:kind "article",
+   :canonical_name "Galas Herpegal mast 10g",
+   :category "Zdravlje i apoteka",
+   :subcategory "Lijekovi",
+   :manufacturer "Galas"}}
+ {:label "HLJEB 400G SA SJEMENKAMA",
+  :unit "kom",
+  :stores ["BINGO"],
+  :expected
+  {:kind "article",
+   :canonical_name "Hljeb sa sjemenkama 400g",
+   :category "Pekara i deserti",
+   :subcategory "Hljeb",
+   :manufacturer nil}}
+ {:label "KAFA MLJEVENA 200G ZLATNA DZE",
+  :unit "kom",
+  :stores ["BINGO"],
+  :expected
+  {:kind "article",
+   :canonical_name "Zlatna Džezva kafa mljevena 200g",
+   :category "Pakovana hrana i pića",
+   :subcategory "Kafa",
+   :manufacturer "Vispak"}}
+ {:label "KAPSULE BARISTA 104g",
+  :unit "kom",
+  :stores ["TROPIC MALOPRODAJA"],
+  :expected
+  {:kind "article",
+   :canonical_name "Kapsule Barista 104g",
+   :category "Pakovana hrana i pića",
+   :subcategory "Kafa",
+   :manufacturer nil}}
+ {:label "KEKS MLJEVENI 2X300G PLAZMA",
+  :unit "kom",
+  :stores ["BINGO"],
+  :expected
+  {:kind "article",
+   :canonical_name "Plazma mljeveni keks 2x300g",
+   :category "Pakovana hrana i pića",
+   :subcategory "Slatkiši",
+   :manufacturer "Bambi"}}
+ {:label "KROMPIR 750G MCCAIN KRISKE SA",
+  :unit "kom",
+  :stores ["BINGO"],
+  :expected
+  {:kind "article",
+   :canonical_name "McCain krompir kriške 750g",
+   :category "Pakovana hrana i pića",
+   :subcategory "Smrznuta hrana",
+   :manufacturer "McCain"}}
+ {:label "KVASAC INSTANT DR OETKER 7",
+  :unit "kom",
+  :stores ["HOSE-KOMERC"],
+  :expected
+  {:kind "article",
+   :canonical_name "Dr. Oetker instant kvasac 7g",
+   :category "Pakovana hrana i pića",
+   :subcategory "Dodaci za pečenje",
+   :manufacturer "Dr Oetker"}}
+ {:label "LIMUN SVJEŽI",
+  :unit "kg",
+  :stores ["HOSE-KOMERC"],
+  :expected
+  {:kind "article",
+   :canonical_name "Limun svježi",
+   :category "Svježe voće i povrće",
+   :subcategory "Voće",
+   :manufacturer nil}}
+ {:label "MEGGLE MLIJEKO 3.2%MM 1L 12",
+  :unit "kom",
+  :stores ["HOSE-KOMERC"],
+  :expected
+  {:kind "article",
+   :canonical_name "Meggle mlijeko 3,2% 1L",
+   :category "Mliječni proizvodi i jaja",
+   :subcategory "Mlijeko",
+   :manufacturer "Meggle"}}
+ {:label "MLIJEKO MEGGLE 3,2% 0,5l",
+  :unit "kom",
+  :stores ["KONZUM"],
+  :expected
+  {:kind "article",
+   :canonical_name "Meggle mlijeko 3,2% 0,5L",
+   :category "Mliječni proizvodi i jaja",
+   :subcategory "Mlijeko",
+   :manufacturer "Meggle"}}
+ {:label "Mivolis flasteri za djecu",
+  :unit "kom",
+  :stores ["dm drogerie markt"],
+  :expected
+  {:kind "article",
+   :canonical_name "Mivolis flasteri za djecu",
+   :category "Zdravlje i apoteka",
+   :subcategory "Prva pomoć",
+   :manufacturer "dm"}}
+ {:label "Oznake za poklone sljokice 20kom Xmas 0 N",
+  :unit "kom",
+  :stores ["Pepco B-H"],
+  :expected
+  {:kind "article",
+   :canonical_name "Oznake za poklone Xmas 20kom",
+   :category "Dom i vrt",
+   :subcategory "Novogodišnji ukrasi",
+   :manufacturer nil}}
+ {:label "PASTETA 114G KOKOSIJA ARGETA",
+  :unit "kom",
+  :stores ["BINGO"],
+  :expected
+  {:kind "article",
+   :canonical_name "Argeta pašteta kokošija 114g",
+   :category "Pakovana hrana i pića",
+   :subcategory "Paštete",
+   :manufacturer "Atlantic Grupa"}}
+ {:label "PECIVO 9X33 33G BROTLINIES SU",
+  :unit "kom",
+  :stores ["BINGO"],
+  :expected
+  {:kind "article",
+   :canonical_name "Brotlinies pecivo 9x33g",
+   :category "Pekara i deserti",
+   :subcategory "Pecivo",
+   :manufacturer "Brotlinies"}}
+ {:label "PIVO TUBORG 0,33L",
+  :unit "kom",
+  :stores ["KONZUM"],
+  :expected
+  {:kind "article",
+   :canonical_name "Tuborg pivo 0,33L",
+   :category "Pakovana hrana i pića",
+   :subcategory "Alkoholna pića",
+   :manufacturer "Tuborg"}}
+ {:label "Papirnate case 12-PAK Xmas ONE Pattern",
+  :unit "kom",
+  :stores ["Pepco B-H"],
+  :expected
+  {:kind "article",
+   :canonical_name "Papirnate čaše Xmas 12kom",
+   :category "Jednokratno posuđe i pakovanje",
+   :subcategory "Jednokratno posuđe",
+   :manufacturer nil}}
+ {:label "Profissimo salv. 33x33cm Do",
+  :unit "kom",
+  :stores ["dm drogerie markt"],
+  :expected
+  {:kind "article",
+   :canonical_name "Profissimo salvete 33x33cm",
+   :category "Papirna galanterija",
+   :subcategory "Salvete",
+   :manufacturer "dm"}}
+ {:label "RWC 0116523953805 SUKNJA",
+  :unit "kom",
+  :stores ["ITX BH"],
+  :expected
+  {:kind "article",
+   :canonical_name "Suknja",
+   :category "Odjeća i modni dodaci",
+   :subcategory "Suknje",
+   :manufacturer nil}}
+ {:label "SCHWEPPES TONIC 1L",
+  :unit "kom",
+  :stores ["ŠAMON PROMET"],
+  :expected
+  {:kind "article",
+   :canonical_name "Schweppes Tonic 1L",
+   :category "Pakovana hrana i pića",
+   :subcategory "Bezalkoholna pića",
+   :manufacturer "The Coca-Cola Company"}}
+ {:label "SETI SODA BIKARBONA 200GR 2",
+  :unit "kom",
+  :stores ["HOSE-KOMERC"],
+  :expected
+  {:kind "article",
+   :canonical_name "Seti soda bikarbona 200g",
+   :category "Pakovana hrana i pića",
+   :subcategory "Dodaci za pečenje",
+   :manufacturer "Seti"}}]

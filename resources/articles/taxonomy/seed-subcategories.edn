@@ -1,0 +1,31 @@
+{"Mliječni proizvodi i jaja"         ["Mlijeko" "Jogurt" "Sir" "Kajmak" "Vrhnje" "Maslac" "Jaja"]
+ "Pakovana hrana i pića"             ["Bezalkoholna pića" "Voćni sokovi" "Voda" "Alkoholna pića" "Kafa" "Čaj"
+                                      "Čokolada i bomboni" "Slatkiši" "Grickalice" "Žitarice" "Tjestenina"
+                                      "Brašno" "Šećer" "Sladila" "Ulje" "Začini" "Paštete" "Umaci i namazi"
+                                      "Konzervirana hrana" "Dodaci za pečenje" "Dječja hrana"
+                                      "Juhe"]
+ "Meso, morski plodovi i delikatesi" ["Svježe meso" "Mesne prerađevine" "Riba i morski plodovi"]
+ "Svježe voće i povrće"              ["Voće" "Povrće"]
+ "Pekara i deserti"                  ["Hljeb" "Pecivo" "Kolači i torte" "Brza hrana"]
+ "Lična njega"                       ["Oralna higijena" "Šampon" "Dezodoransi" "Boje za kosu" "Higijenski ulošci"
+                                      "Šminka" "Njega lica" "Njega tijela" "Usluge ljepote"]
+ "Zdravlje i apoteka"                ["Analgetici" "Vitamini i suplementi" "Prva pomoć" "Lijekovi"]
+ "Sredstva za čišćenje"              ["Deterdžent" "Omekšivači za rublje" "Sredstvo za suđe"
+                                      "Sredstva za čišćenje površina"]
+ "Papirna galanterija"               ["Toalet papir" "Papirne maramice" "Salvete" "Kuhinjski ubrusi"]
+ "Jednokratno posuđe i pakovanje"    ["Kese" "Folije" "Jednokratno posuđe"]
+ "Elektronika i dodaci"              ["Baterije" "Kablovi i punjači"]
+ "Proizvodi za bebe"                 ["Pelene" "Njega beba"]
+ "Oprema za kućne ljubimce"          ["Hrana za kućne ljubimce"]
+ "Duhan i duvanski proizvodi"        ["Cigarete"]
+ "Restorani i kafići"                ["Kafa i topli napici" "Pića" "Hrana"]
+ "Gorivo i transport"                ["Gorivo" "Pranje i njega vozila" "Parking i putarine" "Javni prevoz"
+                                      "Servis i dijelovi vozila" "Taksi"]
+ "Knjige, novine i časopisi"         ["Novine i časopisi" "Knjige"]
+ "Sport i rekreacija"                ["Sportska oprema" "Članarine i ulaznice"]
+ "Kultura i zabava"                  ["Kino i pozorište" "Koncerti i događaji" "Igre na sreću"]
+ "Putovanja i smještaj"              ["Smještaj" "Prevoz na putovanjima"]
+ "Zdravstvene usluge"                ["Ljekarski pregledi" "Stomatolog" "Laboratorija" "Optika"]
+ "Obrazovanje"                       ["Školarine i kursevi" "Udžbenici"]
+ "Pokloni i cvijeće"                 ["Cvijeće" "Poklon paketi" "Ukrasna ambalaža"]
+ "Takse i administrativne usluge"    ["Takse i pristojbe" "Bankarske naknade" "Poštanske usluge"]}

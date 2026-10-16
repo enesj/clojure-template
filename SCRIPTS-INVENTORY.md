@@ -40,7 +40,7 @@ Small, deterministic scripts for article/alias/taxonomy workflows (see `scripts/
 | `report_progress.clj` | Coverage stats + breakdowns by category and manufacturer. |
 | `unmapped_aliases_counts.clj` | Unmapped aliases grouped by supplier with counts. |
 
-Support files: `perplexity-system-prompt.txt`, `README.md`, and `research/` (library namespaces: `heuristics.clj`, `noise.clj`, `output.clj`, `perplexity.clj`, `validation.clj`), `taxonomy/` (EDN data: `brand-parent-mappings.edn`, `brand-rules.edn`, `english-bosnian-categories.edn`, `keyword-category-hints.edn`, `meat-words.edn`, `self-named-brands.edn`, `supplier-hints.edn`).
+Support files: `perplexity-system-prompt.txt`, `README.md`, and `research/` (library namespaces: `heuristics.clj`, `noise.clj`, `output.clj`, `perplexity.clj`, `validation.clj`), `resources/articles/taxonomy/` (EDN data, moved from `scripts/bb/articles/taxonomy/`: `brand-parent-mappings.edn`, `brand-rules.edn`, `english-bosnian-categories.edn`, `keyword-category-hints.edn`, `meat-words.edn`, `self-named-brands.edn`, `supplier-hints.edn`).
 
 ### `code_quality/`
 See `scripts/bb/code_quality/README.md`.

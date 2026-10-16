@@ -13,7 +13,7 @@
 ;; Taxonomy file I/O
 ;; ============================================================
 
-(def ^:private taxonomy-dir "scripts/bb/articles/taxonomy")
+(def ^:private taxonomy-dir "resources/articles/taxonomy")
 
 (defn load-taxonomy
   "Load an EDN taxonomy file from the taxonomy directory. Returns nil if missing."

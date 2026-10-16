@@ -484,6 +484,49 @@
                    :indexes [[:idx_article_aliases_supplier_label :btree {:fields [:supplier_id :raw_label_normalized :unit] :unique true}]
                              [:idx_article_aliases_article :btree {:fields [:article_id]}]]}
 
+ ;; ----------------------------------------------------------------------------
+ ;; Article resolution (background alias → article resolver) — global
+ ;; ----------------------------------------------------------------------------
+
+ :article_resolution_calls {:fields [[:id :uuid {:primary-key true}]
+                                     [:model [:varchar 64] {:null false}]
+                                     [:served_model [:varchar 64]]
+                                     [:request_id [:varchar 128]]
+                                     [:group_count :integer {:null false :default 0}]
+                                     [:stop_reason [:varchar 32]]
+                                     [:input_tokens :integer]
+                                     [:output_tokens :integer]
+                                     [:cache_creation_input_tokens :integer]
+                                     [:cache_read_input_tokens :integer]
+                                     [:duration_ms :integer]
+                                     [:error :text]
+                                     [:created_at :timestamptz {:default [:now]}]]
+                            :indexes [[:idx_article_resolution_calls_created :btree {:fields [:created_at]}]]}
+
+ :article_alias_resolutions {:fields [[:id :uuid {:primary-key true}]
+                                      [:alias_id :uuid {:foreign-key :article_aliases/id :on-delete :cascade :null false}]
+                                      [:status [:enum :alias-resolution-status] {:null false :default "pending"}]
+                                      [:source [:varchar 20]] ;; noise | sibling | exact | llm | manual | external
+                                      [:proposal :jsonb]
+                                      [:decision_reason :text]
+                                      [:confidence :integer]
+                                      [:article_id :uuid {:foreign-key :articles/id :on-delete :set-null}]
+                                      [:call_id :uuid {:foreign-key :article_resolution_calls/id :on-delete :set-null}]
+                                      [:attempts :integer {:null false :default 0}]
+                                      [:error :text]
+                                      [:created_at :timestamptz {:default [:now]}]
+                                      [:updated_at :timestamptz {:default [:now]}]
+                                      [:resolved_at :timestamptz]
+                                      ;; Set by the periodic audit agent; NULL = not audited yet
+                                      [:audited_at :timestamptz]
+                                      [:audit_verdict [:varchar 20]] ;; ok | fixed | rejected
+                                      [:audit_note :text]]
+                             :types [[:alias-resolution-status :enum {:choices ["pending" "processing" "resolved"
+                                                                               "needs_review" "noise" "rejected"
+                                                                               "failed"]}]]
+                             :indexes [[:uniq_article_alias_resolutions_alias :btree {:fields [:alias_id] :unique true}]
+                                       [:idx_article_alias_resolutions_status :btree {:fields [:status :updated_at]}]]}
+
  ;; ============================================================================
  ;; Settings Hierarchy Tables
  ;; ============================================================================

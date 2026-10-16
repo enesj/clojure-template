@@ -33,3 +33,17 @@
   "Normalize raw line-item labels for alias lookup."
   [label]
   (normalize-label label))
+
+(defn normalize-catalog-key
+  "Catalog key for articles.normalized_key and manufacturers.normalized_key.
+  Byte-for-byte port of bb `articles.db/normalize-key` (scripts/bb/articles/db.clj).
+  Note: Đ/đ are not NFD-decomposable and are dropped - intentional, matches existing keys."
+  [s]
+  (when (some? s)
+    (-> (str s)
+      (java.text.Normalizer/normalize java.text.Normalizer$Form/NFD)
+      (str/replace #"\p{InCombiningDiacriticalMarks}+" "")
+      str/lower-case
+      (str/replace #"[^a-z0-9]+" "-")
+      (str/replace #"(^-+)|(-+$)" "")
+      (str/replace #"-+" "-"))))

@@ -14,7 +14,7 @@
 
   This list is intentionally small at the top level:
   - Max 5 food categories.
-  - 20 non-food categories.
+  - 31 non-food categories.
 
   Notes:
   - Uses `categories.name` as the stable identifier (unique index).
@@ -29,7 +29,7 @@
    {:name "Pekara i deserti" :description "Hljeb, peciva, kolači, deserti."}
    {:name "Pakovana hrana i pića" :description "Ostava, grickalice, smrznuta hrana, pića, kafa/čaj, alkohol."}
 
-   ;; Non-food (20)
+   ;; Non-food (31)
    {:name "Sredstva za čišćenje" :description "Hemikalije za čišćenje, deterdženti, dezinfekciona sredstva."}
    {:name "Papirna galanterija" :description "Papirni ubrusi, salvete, maramice, toaletni papir."}
    {:name "Jednokratno posuđe i pakovanje" :description "Posude za ponijeti, kese, folije, etikete."}
@@ -48,6 +48,17 @@
    {:name "Odjeća i modni dodaci" :description "Odjeća, obuća, modni dodaci."}
    {:name "Dom i vrt" :description "Uređenje doma, baštenski i vanjski artikli."}
    {:name "Željeznarija i alati" :description "Alati, željeznarija, vijci i srodna oprema."}
+   {:name "Duhan i duvanski proizvodi" :description "Cigarete, duhan, e-cigarete i pribor za pušenje."}
+   {:name "Restorani i kafići" :description "Hrana i pića posluženi u kafićima, restoranima, bistroima i ćevabdžinicama."}
+   {:name "Gorivo i transport" :description "Gorivo (benzin, dizel, plin), autopraonica, parking, putarine, javni prevoz."}
+   {:name "Knjige, novine i časopisi" :description "Knjige, dnevne novine, časopisi, stripovi."}
+   {:name "Sport i rekreacija" :description "Sportska oprema i odjeća, članarine i ulaznice za teretane, bazene i sportske terene."}
+   {:name "Kultura i zabava" :description "Kino, pozorište, koncerti, muzeji, događaji i igre na sreću."}
+   {:name "Putovanja i smještaj" :description "Hoteli i smještaj, avio, autobuske i željezničke karte na duže relacije, turističke usluge."}
+   {:name "Zdravstvene usluge" :description "Ljekarski pregledi, stomatolog, laboratorija, optika i terapije."}
+   {:name "Obrazovanje" :description "Školarine, kursevi, udžbenici, vrtić i obrazovne usluge."}
+   {:name "Pokloni i cvijeće" :description "Cvijeće, poklon paketi, poklon kartice, ukrasna ambalaža."}
+   {:name "Takse i administrativne usluge" :description "Takse, pristojbe, bankarske i poštanske naknade, ovjere i administrativne usluge."}
    {:name "Igračke i igre" :description "Igračke, društvene igre i hobi artikli."}
    {:name "Ostalo" :description "Razni artikli koji se ne uklapaju u ostale kategorije."}])
 
@@ -74,7 +85,7 @@
    ;; Bootstrap remaps: English categories created before canonical seed was run
    ["Clothing & Accessories" "Odjeća i modni dodaci"]
    ["Services" "Ostalo"]
-   ["Tobacco" "Ostalo"]])
+   ["Tobacco" "Duhan i duvanski proizvodi"]])
 
 (def ^:const protected-categories
   "Categories that are never pruned because the guided expense workflows

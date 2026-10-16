@@ -13,6 +13,33 @@ The `articles_research.clj` script proposes articles + mappings automatically. T
 
 ---
 
+## Pre-phase 0: Resolver Review Queue
+
+A background resolver (dev only; `:article-resolver` in `config/base.edn`) already maps new unmapped aliases
+to articles via the Claude API. Check what it left for humans **before** running the batch flow below:
+
+```text
+GET /admin/api/expenses/article-resolutions?status=needs_review&limit=50   # admin session required
+GET /admin/api/expenses/article-resolutions/stats
+```
+
+```sql
+-- or the SQL equivalent (postgres-mcp)
+SELECT r.status::text, r.source, COUNT(*) FROM article_alias_resolutions r GROUP BY 1, 2 ORDER BY 1, 2;
+```
+
+- `POST /:id/approve` (optional overrides `canonical_name`, `category`, `subcategory`, `manufacturer`,
+  `existing_article_key`) applies a proposal to every `needs_review` row of the same label + unit.
+- `POST /:id/reject` marks the group rejected; `POST /:id/requeue` sends it back to the resolver.
+- In `:dry-run` mode (the initial setting) every outcome lands in `needs_review`; in `:auto` mode only
+  low-confidence or invalid proposals do.
+- Aliases the resolver already mapped no longer show up as unmapped, so the batch flow below only sees what
+  is left. Taxonomy files live in `resources/articles/taxonomy/`: the backend reads them read-only, this
+  skill's learning loop keeps writing them.
+
+
+---
+
 ## Pre-phase: Resolve Review-Required Receipts
 
 Run this **before** touching the article alias backlog.
@@ -296,9 +323,9 @@ leave it for `/manufacturers` after Phase 3.
 > **Regression lesson:** Prompt tightening fixed obvious branded-null rows like `Violeta maramice u` and `PAPIRNE MARAMICE 60-1 U KUTIJI VIOLETA`, but ambiguous descriptor-led rows like `KAPSULE INTENSO...` and `KIKIRIKI GUD PRZENI...` still stayed nil. Treat that split as expected behavior: fix obvious known-brand misses aggressively, but do **not** force a manufacturer onto descriptor-only labels without stronger evidence.
 
 > **New brand→manufacturer discovered during review?** Add it to the appropriate taxonomy file:
-> - `scripts/bb/articles/taxonomy/brand-parent-mappings.edn` — brand→parent-company map
+> - `resources/articles/taxonomy/brand-parent-mappings.edn` — brand→parent-company map
 >   (when brand name differs from manufacturer, e.g. `"Milka" "Mondelez International"`)
-> - `scripts/bb/articles/taxonomy/self-named-brands.edn` — vector of brands where brand = manufacturer
+> - `resources/articles/taxonomy/self-named-brands.edn` — vector of brands where brand = manufacturer
 >   (e.g. `"Meggle"`, `"Haribo"`)
 >
 > These are injected into the Perplexity system prompt via `{{BRAND_MAPPINGS}}`
@@ -458,8 +485,8 @@ If you fixed the same class of mistake on **≥ 2 articles**, update the appropr
 
 | Mistake class | File to update |
 |--------------|----------------|
-| Brand→manufacturer missing/wrong | `scripts/bb/articles/taxonomy/brand-parent-mappings.edn` (brand→parent map) |
-| Brand = manufacturer not recognized | `scripts/bb/articles/taxonomy/self-named-brands.edn` (add brand name) |
+| Brand→manufacturer missing/wrong | `resources/articles/taxonomy/brand-parent-mappings.edn` (brand→parent map) |
+| Brand = manufacturer not recognized | `resources/articles/taxonomy/self-named-brands.edn` (add brand name) |
 | Category/subcategory wrong | Hard classification rules in this file |
 | Prompt wording flaw | `scripts/bb/articles/perplexity-system-prompt.txt` |
 
@@ -546,7 +573,7 @@ bb clear-folder
 | `taxonomy/english-bosnian-categories.edn` | EN→BS map | Local heuristics | English-to-Bosnian category translation |
 | `taxonomy/meat-words.edn` | word set | Local heuristics | Meat product keyword detection |
 
-All taxonomy files live under `scripts/bb/articles/taxonomy/` and are loaded by
+All taxonomy files live under `resources/articles/taxonomy/` and are loaded by
 `articles_research.clj` at research time. Brand mapping files (`brand-parent-mappings.edn`
 and `self-named-brands.edn`) are formatted and injected into the Perplexity system prompt
 via the `{{BRAND_MAPPINGS}}` placeholder.

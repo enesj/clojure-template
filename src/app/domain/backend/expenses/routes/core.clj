@@ -4,6 +4,7 @@
     [app.domain.backend.expenses.handlers.search :as search]
     [app.domain.backend.expenses.routes.articles :as articles]
     [app.domain.backend.expenses.routes.article-aliases :as article-aliases]
+    [app.domain.backend.expenses.routes.article-resolutions :as article-resolutions]
     [app.domain.backend.expenses.routes.categories :as categories]
     [app.domain.backend.expenses.routes.cities :as cities]
     [app.domain.backend.expenses.routes.countries :as countries]
@@ -50,6 +51,7 @@
      (payers/routes db)
      (receipts/routes db app-config)
      (article-aliases/routes db)
+     (article-resolutions/routes db app-config)
      (supplier-aliases/routes db)
      (store-aliases/routes db)
 

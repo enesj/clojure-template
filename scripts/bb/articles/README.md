@@ -65,3 +65,11 @@ DATABASE_PUBLIC_URL="postgresql://user:pass@gondola.proxy.rlwy.net:12386/railway
 | `ensure_taxonomy.clj` | Ensure manufacturers/categories/subcategories exist |
 | `map_aliases.clj` | Map `article_aliases` rows to canonical articles (optionally disambiguated by `unit`) |
 | `delete_unmapped_aliases.clj` | Delete unmapped aliases by raw label (OCR noise cleanup) |
+
+## Taxonomy files
+
+The brand/keyword/supplier hint files live in `resources/articles/taxonomy/` (moved from
+`scripts/bb/articles/taxonomy/`). `articles_research.clj` keeps writing them (learning loop); the backend
+article resolver (`app.domain.backend.expenses.services.article-resolution.*`) only **reads** the same files
+via the classpath and reloads them when a file changes. `seed-subcategories.edn` there is the curated
+Bosnian subcategory list used by the resolver's dev seed helper.

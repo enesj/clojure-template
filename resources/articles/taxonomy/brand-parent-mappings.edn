@@ -129,4 +129,8 @@
 
  ;; Batch 2026-04 additions
  "Tutti Frutti" "Kraš"
- "Kandit"       "Kraš"}
+ "Kandit"       "Kraš"
+ ;; Article resolver review 2026-10 (verified on the web)
+ "Vindon"       "Vindija"
+ "Bulldog"      "Campari Group"
+ "Prima kafa"   "AM Prima"}

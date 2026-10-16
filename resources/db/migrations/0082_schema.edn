@@ -1,0 +1,12 @@
+({:action :add-column,
+  :field-name :audit-verdict,
+  :model-name :article_alias_resolutions,
+  :options {:type [:varchar 20]}}
+ {:action :add-column,
+  :field-name :audit-note,
+  :model-name :article_alias_resolutions,
+  :options {:type :text}}
+ {:action :add-column,
+  :field-name :audited-at,
+  :model-name :article_alias_resolutions,
+  :options {:type :timestamptz}})

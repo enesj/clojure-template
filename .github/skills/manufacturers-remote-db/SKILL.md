@@ -245,8 +245,8 @@ so future `articles_research.clj` runs recognize them automatically:
 
 | File | When to update |
 |------|---------------|
-| `scripts/bb/articles/taxonomy/self-named-brands.edn` | Brand name = manufacturer name (e.g. `"Zbregov"`, `"Cekin"`) |
-| `scripts/bb/articles/taxonomy/brand-parent-mappings.edn` | Brand differs from parent (e.g. `"Nocko"` -> `"Milkos"`) |
+| `resources/articles/taxonomy/self-named-brands.edn` | Brand name = manufacturer name (e.g. `"Zbregov"`, `"Cekin"`) |
+| `resources/articles/taxonomy/brand-parent-mappings.edn` | Brand differs from parent (e.g. `"Nocko"` -> `"Milkos"`) |
 
 ---
 

@@ -1,0 +1,69 @@
+({:action :create-table,
+  :model-name :article_resolution_calls,
+  :fields
+  {:request-id {:type [:varchar 128]},
+   :cache-creation-input-tokens {:type :integer},
+   :served-model {:type [:varchar 64]},
+   :group-count {:null false, :default 0, :type :integer},
+   :stop-reason {:type [:varchar 32]},
+   :output-tokens {:type :integer},
+   :input-tokens {:type :integer},
+   :cache-read-input-tokens {:type :integer},
+   :duration-ms {:type :integer},
+   :id {:primary-key true, :type :uuid},
+   :error {:type :text},
+   :created-at {:default [:now], :type :timestamptz},
+   :model {:null false, :type [:varchar 64]}}}
+ {:action :create-index,
+  :index-name :idx-article-resolution-calls-created,
+  :model-name :article_resolution_calls,
+  :options {:fields [:created_at], :type :btree}}
+ {:action :create-type,
+  :type-name :alias-resolution-status,
+  :model-name :article_alias_resolutions,
+  :options
+  {:choices
+   ["pending"
+    "processing"
+    "resolved"
+    "needs_review"
+    "noise"
+    "rejected"
+    "failed"],
+   :type :enum}}
+ {:action :create-table,
+  :model-name :article_alias_resolutions,
+  :fields
+  {:decision-reason {:type :text},
+   :updated-at {:default [:now], :type :timestamptz},
+   :resolved-at {:type :timestamptz},
+   :call-id
+   {:foreign-key :article_resolution_calls/id,
+    :on-delete :set-null,
+    :type :uuid},
+   :attempts {:null false, :default 0, :type :integer},
+   :alias-id
+   {:foreign-key :article_aliases/id,
+    :on-delete :cascade,
+    :null false,
+    :type :uuid},
+   :source {:type [:varchar 20]},
+   :article-id
+   {:foreign-key :articles/id, :on-delete :set-null, :type :uuid},
+   :status
+   {:null false,
+    :default "pending",
+    :type [:enum :alias-resolution-status]},
+   :id {:primary-key true, :type :uuid},
+   :error {:type :text},
+   :proposal {:type :jsonb},
+   :confidence {:type :integer},
+   :created-at {:default [:now], :type :timestamptz}}}
+ {:action :create-index,
+  :index-name :uniq-article-alias-resolutions-alias,
+  :model-name :article_alias_resolutions,
+  :options {:fields [:alias_id], :unique true, :type :btree}}
+ {:action :create-index,
+  :index-name :idx-article-alias-resolutions-status,
+  :model-name :article_alias_resolutions,
+  :options {:fields [:status :updated_at], :type :btree}})
