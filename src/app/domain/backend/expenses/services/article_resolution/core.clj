@@ -525,7 +525,10 @@
                   cat-row (or (get index cat) (throw (ex-info "Unknown category" {:status 400 :problems ["unknown-category"]})))
                   sub-row (or (catalog/ensure-subcategory! tx (:id cat-row) sub (:allow-new-subcategories? cfg))
                             (throw (ex-info "Subcategory not allowed" {:status 400 :problems ["new-subcategory-not-allowed"]})))
-                  mfr     (if (contains? c :manufacturer) (some-> (:manufacturer c) str/trim not-empty) (:manufacturer old))
+                  ;; same brand -> parent normalization as Claude's answers (brand-parent-mappings.edn)
+                  mfr     (if (contains? c :manufacturer)
+                            (validation/normalize-manufacturer (taxonomy/current) (:manufacturer c))
+                            (:manufacturer old))
                   mfr-row (when mfr (catalog/ensure-manufacturer! tx mfr (:allow-new-manufacturers? cfg)))
                   clash   (catalog/find-article tx (catalog/catalog-keys name*) (:unit old))
                   shared? (pos? (:c (jdbc/execute-one! tx

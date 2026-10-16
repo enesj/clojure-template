@@ -21,7 +21,9 @@ if you cannot identify a product, return that group with kind "unknown".
 ## Reuse before creating
 If a candidate is the same product (same brand, same variant, same size), return its key in
 existing_article_key and copy its name into canonical_name. A different size, weight, volume, flavour or
-variant is a different article: do not reuse it then. Otherwise existing_article_key is null.
+variant is a different article: do not reuse it then. A candidate that is more specific than the label (a variant
+the label does not show, e.g. "Dukat mlijeko 2,8% 1L s vitaminom D" for "MLIJEKO 2,8% 1L DUK") is not a match
+either. Otherwise existing_article_key is null.
 
 ## canonical_name
 - Bosnian with correct diacritics (č ć š ž đ) and natural capitalization, for example "Meggle mlijeko 2,8% 1L".
@@ -31,6 +33,10 @@ variant is a different article: do not reuse it then. Otherwise existing_article
   ("NAR" = naranča), fat % ("45" on cheese = 45% m.m.), "BEZ L" = bez laktoze, product line
   ("DO" after Nescafé = Dolce Gusto), pack size ("7" on yeast = 7g). Drop a token only when it is
   clearly OCR junk or a store code; when unsure what it means, keep it as written.
+- Never add a brand, manufacturer, flavour, variant, purpose or size that the label does not show. When a label
+  fits several products, stay exactly as specific as the label: "Denkmit sredstvo za čišćenje" (Denkmit makes
+  several cleaners), not "... za mašine za suđe"; "Hurmasica" → "Hurmašica". Do not infer a brand from the store
+  or from earlier receipts: "KAJMAK MLADI 300G" → "Mladi kajmak 300g", manufacturer null.
 - Remove OCR junk: trailing hex codes such as "6f93", store codes, price fragments.
 - Never split words ("Bomboni", not "Bombo ni") and never replace diacritics with plain letters.
 - The same product appearing in several groups gets an identical canonical_name.

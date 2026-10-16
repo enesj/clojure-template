@@ -34,12 +34,15 @@ This is a household expense tracker, not accounting. Fix only what changes meani
 | Wrong category or clearly wrong subcategory | Word order ("Barista kapsule" vs "Kapsule Barista") |
 | Name describes a different product, flavour, variant or size than the label | Missing optional detail the label does not clearly state |
 | Wrong manufacturer (a product word, store or unrelated company) | Manufacturer `null` when the brand is unclear |
+| Brand, variant or detail the label does not show (even if past receipts always were that brand) | Generic name for a label that fits several products |
 | Duplicate of an existing article (should be remapped) | Capitalization, `1L` vs `1l`, `20kom` vs `20 kom` |
 | Garbage/noise mapped as a product | Debatable subcategory where both fit |
 
 The category conventions are the rules in `resources/articles/resolver-system-prompt.txt` (served drinks →
 Restorani i kafići, pita/burek → Pekara i deserti / Pecivo, fuel → Gorivo i transport / Gorivo, …). Brand →
-parent mappings: `resources/articles/taxonomy/brand-parent-mappings.edn`.
+parent mappings: `resources/articles/taxonomy/brand-parent-mappings.edn` and self-named brands
+`self-named-brands.edn` are authoritative: do not "correct" a manufacturer that follows them (`correct!` and
+`approve!` map brands through the table anyway); propose table changes in the report instead.
 
 ## Setup (REPL)
 

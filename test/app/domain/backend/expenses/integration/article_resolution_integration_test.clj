@@ -209,6 +209,9 @@
           (is (= old (article-of g)))
           (is (= "IT Ispravno ime 1L" (:canonical_name (q1 db ["SELECT canonical_name FROM articles WHERE id = ?" old]))))
           (is (nil? (:manufacturer_id (q1 db ["SELECT manufacturer_id FROM articles WHERE id = ?" old]))))
+          (core/correct! db app-config (first (:resolution-ids g)) {:manufacturer "Denkmit"})
+          (is (= "dm" (:display_name (q1 db ["SELECT m.display_name FROM articles a JOIN manufacturers m ON m.id = a.manufacturer_id WHERE a.id = ?" old])))
+            "manufacturer goes through brand-parent-mappings.edn")
           (is (= #{"fixed"} (set (map :audit_verdict (q db ["SELECT audit_verdict FROM article_alias_resolutions WHERE id = ANY(?)"
                                                             (into-array java.util.UUID (:resolution-ids g))])))))))
       (testing "shared article: only this group moves to a new article; the other keeps the old one"
